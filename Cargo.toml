@@ -1,0 +1,24 @@
+[package]
+name = "lopala"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+axum = { version = "0.7", features = ["ws"] }
+tokio = { version = "1.0", features = ["full"] }
+tower-http = { version = "0.5", features = ["fs", "cors"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+rust-embed = { version = "8.0", features = ["axum"] }
+clap = { version = "4.4", features = ["derive"] }
+nix = { version = "0.27", features = ["term", "process", "signal"] }
+libc = "0.2"
+tokio-util = { version = "0.7", features = ["io"] }
+futures-util = "0.3"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+anyhow = "1.0"
+url = "2.5"
+
+[build-dependencies]
+anyhow = "1.0"
