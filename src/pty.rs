@@ -1,11 +1,12 @@
 use nix::pty::{forkpty, Winsize};
 use nix::unistd::{ForkResult};
-use std::os::unix::io::RawFd;
+use std::os::unix::io::{OwnedFd, AsRawFd};
 use tracing::{info, error};
 
-/// OS-level PTY state: fd + pid
+/// THE DIRTY OS-LEVEL SHIT: forkpty, ioctl, and SIGWINCH handling.
+/// This is where the magic happens/everything breaks.
 pub struct Pty {
-    pub fd: RawFd,
+    pub fd: OwnedFd,
     pub pid: nix::unistd::Pid,
 }
 
@@ -27,14 +28,11 @@ impl Pty {
                     Ok(Pty { fd: fork_result.master, pid })
                 }
                 ForkResult::Child => {
-                    // In the child process: exec the shell
                     let c_shell = std::ffi::CString::new(shell).unwrap();
                     let args = [c_shell.clone()];
-                    if let Err(e) = nix::unistd::execv(&c_shell, &args) {
-                        error!("Failed to exec shell in PTY child: {}", e);
-                        std::process::exit(1);
-                    }
-                    unreachable!()
+                    let _ = nix::unistd::execv(&c_shell, &args);
+                    error!("Failed to exec shell in PTY child");
+                    std::process::exit(1);
                 }
             },
             Err(e) => anyhow::bail!("forkpty failed: {}", e),
@@ -50,7 +48,7 @@ impl Pty {
             ws_ypixel: 0,
         };
         unsafe {
-            if libc::ioctl(self.fd, libc::TIOCSWINSZ, &ws) < 0 {
+            if libc::ioctl(self.fd.as_raw_fd(), libc::TIOCSWINSZ, &ws) < 0 {
                 return Err(anyhow::anyhow!("ioctl TIOCSWINSZ failed"));
             }
         }
