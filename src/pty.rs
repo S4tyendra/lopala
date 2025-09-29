@@ -55,3 +55,11 @@ impl Pty {
         Ok(())
     }
 }
+
+impl Drop for Pty {
+    fn drop(&mut self) {
+        // Kill the child shell process when the master Pty file is dropped.
+        let _ = nix::sys::signal::kill(self.pid, nix::sys::signal::SIGKILL);
+        let _ = nix::sys::wait::waitpid(self.pid, None);
+    }
+}
