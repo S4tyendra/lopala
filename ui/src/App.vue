@@ -3,40 +3,49 @@ import { ref, onMounted, onUnmounted, nextTick, markRaw } from 'vue';
 import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import 'xterm/css/xterm.css';
-import { Terminal as TerminalIcon, Plus, X, Command, ActivitySquare } from 'lucide-vue-next';
+import { Terminal as TerminalIcon, FileText, Menu } from 'lucide-vue-next';
 
 interface TerminalSession {
-  id: string;
-  title: string;
-  term: Terminal | null;
-  fitAddon: FitAddon | null;
-  ws: WebSocket | null;
-  connected: boolean;
-  element: HTMLDivElement | null;
+  ws: WebSocket;
+  term: Terminal;
+  fitAddon: FitAddon;
 }
 
-const sessions = ref<TerminalSession[]>([]);
-const activeSessionId = ref<string | null>(null);
-const globalConnected = ref(false);
-const hostUrl = ref(window.location.host);
+interface AppWindow {
+  id: string;
+  type: 'terminal' | 'log';
+  title: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  z: number;
+  minimized: boolean;
+  maximized: boolean;
+  termSession: TerminalSession | null;
+  _preX?: number;
+  _preY?: number;
+  _preW?: number;
+  _preH?: number;
+}
 
-const initTerminalSession = async () => {
+const windows = ref<AppWindow[]>([]);
+const activeWindowId = ref<string | null>(null);
+let zCounter = 10;
+
+const spawnTerminal = async () => {
   const id = Math.random().toString(36).substring(7);
-  
-  const newSession: TerminalSession = {
-    id,
-    title: `tty-${id}`,
-    term: null,
-    fitAddon: null,
-    ws: null,
-    connected: false,
-    element: null,
+  const win: AppWindow = {
+    id, type: 'terminal', title: `Terminal`,
+    x: 100 + (windows.value.length * 40) % 300, 
+    y: 100 + (windows.value.length * 40) % 300,
+    w: 700, h: 450, z: ++zCounter, 
+    minimized: false, maximized: false, termSession: null
   };
   
-  sessions.value.push(newSession);
-  activeSessionId.value = id;
-  
-  await nextTick(); // Wait for DOM element to render
+  windows.value.push(win);
+  focusWindow(win.id);
+  await nextTick();
   
   const term = new Terminal({
     cursorBlink: true,
@@ -52,35 +61,33 @@ const initTerminalSession = async () => {
 
   const fitAddon = new FitAddon();
   term.loadAddon(fitAddon);
-  
-  term.onTitleChange((title) => {
-    newSession.title = title || `tty-${id}`;
-  });
 
   const el = document.getElementById(`term-${id}`) as HTMLDivElement;
   if (el) {
     term.open(el);
     fitAddon.fit();
-    newSession.element = markRaw(el);
   }
-  
-  newSession.term = markRaw(term);
-  newSession.fitAddon = markRaw(fitAddon);
 
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   const wsUrl = `${protocol}//${window.location.host}/_ws`;
   const ws = new WebSocket(wsUrl);
-  newSession.ws = markRaw(ws);
+
+  win.termSession = {
+    ws: markRaw(ws),
+    term: markRaw(term),
+    fitAddon: markRaw(fitAddon)
+  };
+
+  term.onTitleChange((title) => {
+    win.title = title || `Terminal`;
+  });
 
   ws.onopen = () => {
-    newSession.connected = true;
-    updateGlobalStatus();
-    term.write('\r\n\x1b[32m✔ Connected to Lopala Node\x1b[0m\r\n');
-    
+    console.log(`[tty-${id}] connected to backend`);
     const dims = { type: 'Resize', data: { rows: term.rows, cols: term.cols } };
     ws.send(JSON.stringify(dims));
   };
-
+  
   ws.onmessage = async (event) => {
     if (event.data instanceof Blob) {
       const arrayBuffer = await event.data.arrayBuffer();
@@ -88,172 +95,239 @@ const initTerminalSession = async () => {
     }
   };
 
-  ws.onclose = () => {
-    newSession.connected = false;
-    updateGlobalStatus();
-    term.write('\r\n\x1b[31m✘ Connection Closed\x1b[0m\r\n');
-  };
-
   term.onData((data) => {
     if (ws.readyState === WebSocket.OPEN) {
       ws.send(new TextEncoder().encode(data));
     }
   });
+  
+  ws.onclose = () => {
+    console.log(`[tty-${id}] disconnected`);
+    win.title = `${win.title} (Disconnected)`;
+  };
 };
 
-const updateGlobalStatus = () => {
-  globalConnected.value = sessions.value.some(s => s.connected);
+const spawnLogs = async () => {
+  const win = windows.value.find(w => w.type === 'log');
+  if (win) {
+    win.minimized = false;
+    focusWindow(win.id);
+    return;
+  }
+  const id = Math.random().toString(36).substring(7);
+  windows.value.push({
+    id, type: 'log', title: `System Logs`,
+    x: 200, y: 150, w: 500, h: 350, z: ++zCounter, 
+    minimized: false, maximized: false, termSession: null
+  });
+  focusWindow(id);
 };
 
-const switchSession = (id: string) => {
-  activeSessionId.value = id;
-  nextTick(() => {
-    const session = sessions.value.find(s => s.id === id);
-    if (session && session.fitAddon) {
-      session.fitAddon.fit();
+// Window Management
+const focusWindow = (id: string) => {
+  const win = windows.value.find(w => w.id === id);
+  if (win) {
+    win.z = ++zCounter;
+    activeWindowId.value = id;
+    if (!win.minimized) {
+      nextTick(() => {
+        win.termSession?.term?.focus();
+      });
     }
+  }
+};
+
+const closeWindow = (id: string) => {
+  const i = windows.value.findIndex(w => w.id === id);
+  if (i !== -1) {
+    const win = windows.value[i];
+    win.termSession?.ws?.close();
+    win.termSession?.term?.dispose();
+    windows.value.splice(i, 1);
+  }
+};
+
+const toggleMaximize = (win: AppWindow) => {
+  if (win.maximized) {
+    win.maximized = false;
+    win.x = win._preX || 100;
+    win.y = win._preY || 100;
+    win.w = win._preW || 700;
+    win.h = win._preH || 450;
+  } else {
+    win._preX = win.x;
+    win._preY = win.y;
+    win._preW = win.w;
+    win._preH = win.h;
+    win.maximized = true;
+    win.x = 0;
+    win.y = 0;
+    win.w = window.innerWidth;
+    win.h = window.innerHeight - 80; // Account for Dock
+  }
+  nextTick(() => {
+    win.termSession?.fitAddon?.fit();
+    win.termSession?.ws?.send(JSON.stringify({ type: 'Resize', data: { rows: win.termSession.term.rows, cols: win.termSession.term.cols } }));
   });
 };
 
-const closeSession = (event: Event, id: string) => {
-  event.stopPropagation();
-  const session = sessions.value.find(s => s.id === id);
-  if (session) {
-    session.ws?.close();
-    session.term?.dispose();
-    
-    const index = sessions.value.findIndex(s => s.id === id);
-    sessions.value.splice(index, 1);
-    
-    if (activeSessionId.value === id) {
-      if (sessions.value.length > 0) {
-        switchSession(sessions.value[sessions.value.length - 1].id);
-      } else {
-        activeSessionId.value = null;
-      }
-    }
+// Drag & Resize State
+let dragState = { isDragging: false, win: null as AppWindow | null, startX: 0, startY: 0, startLeft: 0, startTop: 0 };
+let resizeState = { isResizing: false, win: null as AppWindow | null, startX: 0, startY: 0, startW: 0, startH: 0, edge: 'se' };
+
+const startDrag = (e: MouseEvent, win: AppWindow) => {
+  if (win.maximized) return;
+  dragState = { isDragging: true, win, startX: e.clientX, startY: e.clientY, startLeft: win.x, startTop: win.y };
+  focusWindow(win.id);
+};
+
+const startResize = (e: MouseEvent, win: AppWindow, edge: string) => {
+  if (win.maximized) return;
+  e.preventDefault();
+  resizeState = { isResizing: true, win, startX: e.clientX, startY: e.clientY, startW: win.w, startH: win.h, edge };
+  focusWindow(win.id);
+};
+
+const onMouseMove = (e: MouseEvent) => {
+  if (dragState.isDragging && dragState.win) {
+    dragState.win.x = dragState.startLeft + (e.clientX - dragState.startX);
+    dragState.win.y = Math.max(0, dragState.startTop + (e.clientY - dragState.startY));
   }
-  updateGlobalStatus();
+  if (resizeState.isResizing && resizeState.win) {
+    const w = resizeState.win;
+    if (resizeState.edge.includes('e')) w.w = Math.max(300, resizeState.startW + (e.clientX - resizeState.startX));
+    if (resizeState.edge.includes('s')) w.h = Math.max(200, resizeState.startH + (e.clientY - resizeState.startY));
+    w.termSession?.fitAddon?.fit();
+  }
+};
+
+const onMouseUp = () => {
+  if (resizeState.isResizing && resizeState.win) {
+     const termSession = resizeState.win.termSession;
+     if (termSession) {
+        termSession.fitAddon?.fit();
+        termSession.ws?.send(JSON.stringify({ type: 'Resize', data: { rows: termSession.term.rows, cols: termSession.term.cols } }));
+     }
+  }
+  dragState.isDragging = false;
+  resizeState.isResizing = false;
+};
+
+// Keyboard Shortcuts
+const onKeyDown = (e: KeyboardEvent) => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
+    e.preventDefault();
+    spawnTerminal();
+  }
 };
 
 onMounted(() => {
-  initTerminalSession();
+  window.addEventListener('mousemove', onMouseMove);
+  window.addEventListener('mouseup', onMouseUp);
+  window.addEventListener('keydown', onKeyDown);
   
   window.addEventListener('resize', () => {
-    const activeSession = sessions.value.find(s => s.id === activeSessionId.value);
-    if (activeSession && activeSession.fitAddon) {
-      activeSession.fitAddon.fit();
-      
-      const dims = { type: 'Resize', data: { rows: activeSession.term?.rows, cols: activeSession.term?.cols } };
-      activeSession.ws?.send(JSON.stringify(dims));
-    }
+    windows.value.filter(w => w.maximized || !w.minimized).forEach(w => {
+      if (w.maximized) {
+        w.w = window.innerWidth;
+        w.h = window.innerHeight - 80;
+      }
+      if (w.termSession) {
+        w.termSession.fitAddon?.fit();
+        w.termSession.ws?.send(JSON.stringify({ type: 'Resize', data: { rows: w.termSession.term.rows, cols: w.termSession.term.cols } }));
+      }
+    });
   });
+
+  // Initial Open
+  spawnTerminal();
 });
 
 onUnmounted(() => {
-  sessions.value.forEach(s => s.ws?.close());
+  window.removeEventListener('mousemove', onMouseMove);
+  window.removeEventListener('mouseup', onMouseUp);
+  window.removeEventListener('keydown', onKeyDown);
+  windows.value.forEach(w => w.termSession?.ws?.close());
 });
 </script>
 
 <template>
-  <div class="flex min-h-screen bg-[#060606] text-white">
-    <!-- Glassy Sidebar -->
-    <aside class="w-64 border-r border-[#ffffff10] bg-[#ffffff05] backdrop-blur-xl flex flex-col pt-6 pb-6 space-y-8 h-screen z-10 shrink-0">
-      <div class="flex items-center space-x-3 px-6">
-        <div class="w-10 h-10 bg-linear-to-br from-cyan-400 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-cyan-500/20">
-          <TerminalIcon class="w-6 h-6 text-white" />
-        </div>
-        <h1 class="text-xl font-bold tracking-tight">LOPALA</h1>
-      </div>
-
-      <nav class="flex-1 space-y-1 px-4 overflow-y-auto w-full scrollbar-hide">
-        <p class="text-xs font-semibold text-zinc-500 mb-3 ml-2 uppercase tracking-wider">Sessions</p>
-        
-        <div 
-          v-for="(session) in sessions" :key="session.id"
-          @click="switchSession(session.id)"
-          :class="['flex items-center justify-between px-3 py-2.5 rounded-lg transition-all cursor-pointer group border', 
-                   activeSessionId === session.id ? 'bg-[#ffffff10] border-[#ffffff10] text-cyan-400 shadow-sm' : 'border-transparent text-zinc-400 hover:bg-[#ffffff05]']"
-        >
-          <div class="flex items-center space-x-3 overflow-hidden">
-            <Command class="w-4 h-4 shrink-0" />
-            <span class="font-medium text-sm truncate">{{ session.title }}</span>
-          </div>
-          
-          <div class="flex items-center space-x-2">
-            <div :class="['w-1.5 h-1.5 rounded-full', session.connected ? 'bg-green-500 shadow-[0_0_5px_#22c55e]' : 'bg-zinc-600']"></div>
-            <button @click="(e) => closeSession(e, session.id)" class="opacity-0 group-hover:opacity-100 transition-opacity hover:bg-zinc-800 p-1 rounded">
-              <X class="w-3 h-3" />
-            </button>
-          </div>
-        </div>
-
-        <button @click="initTerminalSession" class="w-full mt-2 flex items-center justify-center space-x-2 px-3 py-2 text-zinc-400 border border-dashed border-[#ffffff20] hover:border-cyan-500 hover:text-cyan-400 rounded-lg transition-all text-sm font-medium">
-          <Plus class="w-4 h-4" />
-          <span>New Terminal</span>
-        </button>
-      </nav>
-
-      <div class="pt-6 border-t border-[#ffffff10]">
-        <div class="flex items-center justify-between px-6">
-          <div class="flex items-center space-x-2">
-            <div :class="['w-2 h-2 rounded-full', globalConnected ? 'bg-green-500 shadow-[0_0_8px_#22c55e]' : 'bg-red-500 shadow-[0_0_8px_#ef4444]']"></div>
-            <span class="text-xs font-mono text-zinc-500">{{ globalConnected ? 'CLUSTER LIVE' : 'OFFLINE' }}</span>
-          </div>
-        </div>
-      </div>
-    </aside>
-
-    <!-- Main View -->
-    <main class="flex-1 flex flex-col h-screen min-w-0 relative">
-      <!-- Top Bar -->
-      <header class="h-16 shrink-0 border-b border-[#ffffff10] bg-[#ffffff02] backdrop-blur-md flex items-center justify-between px-8 z-10">
-        <div class="flex items-center space-x-6">
-          <div class="flex flex-col">
-            <span class="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Host</span>
-            <span class="text-sm font-medium text-zinc-200">{{ hostUrl }}</span>
-          </div>
-          <div class="w-px h-6 bg-[#ffffff10]"></div>
-          <div class="flex flex-col">
-            <span class="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Status</span>
-            <span class="text-sm font-medium text-zinc-200">{{ sessions.length }} Active PTYs</span>
-          </div>
-        </div>
-      </header>
-
-      <!-- Terminal Area -->
-      <section class="flex-1 p-6 relative min-h-0 bg-[#060606]">
-        <div v-if="sessions.length === 0" class="w-full h-full flex flex-col items-center justify-center space-y-4 text-zinc-500 z-10 relative">
-          <ActivitySquare class="w-16 h-16 opacity-30" />
-          <p>No active terminal sessions.</p>
-          <button @click="initTerminalSession" class="px-6 py-2 bg-cyan-600 hover:bg-cyan-500 text-white font-medium rounded-lg transition-colors">Start New Session</button>
-        </div>
-
-        <div v-for="session in sessions" :key="session.id" 
-             v-show="activeSessionId === session.id"
-             class="w-full h-full bg-[#0c0c0c] rounded-2xl border border-[#ffffff10] overflow-hidden shadow-2xl relative group flex flex-col">
+  <!-- Desktop Environment -->
+  <div class="h-screen w-screen overflow-hidden bg-slate-950 font-sans text-gray-200 select-none relative" 
+       style="background-image: radial-gradient(circle at 50% 10%, #1a202c 0%, #020617 100%);">
+    
+    <!-- Workspace Layer -->
+    <div class="absolute inset-0 overflow-hidden pointer-events-none">
+      
+      <!-- Windows -->
+      <div v-for="win in windows" 
+           :key="win.id"
+           :style="{ left: win.x + 'px', top: win.y + 'px', width: win.w + 'px', height: win.h + 'px', zIndex: win.z }"
+           v-show="!win.minimized"
+           class="absolute flex flex-col bg-[#1c1c1e] rounded-xl overflow-hidden shadow-2xl pointer-events-auto border border-[#ffffff15] transition-[shadow,transform] duration-75"
+           @mousedown="focusWindow(win.id)"
+           :class="[activeWindowId === win.id ? 'shadow-[0_12px_40px_rgba(0,0,0,0.8)] border-[#ffffff25]' : 'shadow-none brightness-75']"
+      >
+          <!-- MacOS Title Bar -->
+          <div class="h-10 bg-[#2d2d30] flex items-center px-4 flex-shrink-0 cursor-default" @mousedown="startDrag($event, win)">
+             <!-- Controls -->
+             <div class="flex space-x-2 w-20">
+                <div @click.stop="closeWindow(win.id)" class="w-3 h-3 rounded-full bg-[#ff5f56] hover:bg-[#ff5f56]/80 cursor-pointer shadow-inner"></div>
+                <div @click.stop="win.minimized = true" class="w-3 h-3 rounded-full bg-[#ffbd2e] hover:bg-[#ffbd2e]/80 cursor-pointer shadow-inner"></div>
+                <div @click.stop="toggleMaximize(win)" class="w-3 h-3 rounded-full bg-[#27c93f] hover:bg-[#27c93f]/80 cursor-pointer shadow-inner"></div>
+             </div>
              
-           <div class="h-10 bg-[#161616] border-b border-[#ffffff05] flex items-center px-4 shrink-0 shadow-sm relative z-20">
-             <div class="flex space-x-2">
-               <div class="w-2.5 h-2.5 rounded-full bg-[#ff5f56]"></div>
-               <div class="w-2.5 h-2.5 rounded-full bg-[#ffbd2e]"></div>
-               <div class="w-2.5 h-2.5 rounded-full bg-[#27c93f]"></div>
+             <!-- Title -->
+             <div class="flex-1 text-center text-xs font-semibold text-gray-300 pointer-events-none truncate cursor-default select-none tracking-wide">
+                {{ win.title }}
              </div>
-             <div class="flex-1 flex justify-center text-xs font-mono text-zinc-500 select-none overflow-hidden text-ellipsis whitespace-nowrap px-4 max-w-sm mx-auto">
-               {{ session.title }}
-             </div>
-           </div>
-
-          <div :id="'term-' + session.id" class="flex-1 w-full p-4 overflow-hidden relative z-10"></div>
+             <div class="w-20"></div> <!-- Balance -->
+          </div>
           
-          <div class="absolute -top-1/2 -right-1/2 w-full h-full bg-cyan-500/5 blur-[120px] rounded-full pointer-events-none"></div>
-          <div class="absolute -bottom-1/2 -left-1/2 w-full h-full bg-blue-500/5 blur-[120px] rounded-full pointer-events-none"></div>
-        </div>
-      </section>
+          <!-- Inner Payload -->
+          <div class="flex-1 relative bg-[#060606]">
+              <div v-if="win.type === 'terminal'" :id="'term-' + win.id" class="absolute inset-0 p-1"></div>
+              
+              <div v-if="win.type === 'log'" class="absolute inset-0 p-4 overflow-y-auto text-xs font-mono text-zinc-400 bg-[#0c0c0c] select-text">
+                 <p class="text-green-500 mb-2">[System] Lopala Environment Initialized</p>
+                 <p v-for="w in windows" :key="'log'+w.id" class="mb-1 text-zinc-300">
+                    <span class="text-blue-400">INFO</span> - Window '{{w.title}}' [{{w.type}}] active {{w.w}}x{{w.h}} | z-index: {{w.z}}
+                 </p>
+              </div>
+          </div>
+          
+          <!-- Invisible Resize Borders -->
+          <div class="absolute right-0 bottom-0 w-4 h-4 cursor-se-resize z-50" @mousedown.stop="startResize($event, win, 'se')"></div>
+          <div class="absolute right-0 top-0 bottom-4 w-1 cursor-e-resize z-50" @mousedown.stop="startResize($event, win, 'e')"></div>
+          <div class="absolute left-0 bottom-0 right-4 h-1 cursor-s-resize z-50" @mousedown.stop="startResize($event, win, 's')"></div>
+      </div>
+    </div>
 
-      <div class="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 pointer-events-none"></div>
-      <div class="absolute inset-0 bg-[linear-gradient(to_right,#ffffff02_1px,transparent_1px),linear-gradient(to_bottom,#ffffff02_1px,transparent_1px)] bg-size-[40px_40px] pointer-events-none leading-none"></div>
-    </main>
+    <!-- macOS Dock -->
+    <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex items-end space-x-3 bg-white/5 backdrop-blur-xl px-4 py-2.5 rounded-2xl border border-white/10 shadow-2xl z-[99999] pointer-events-auto">
+      
+      <!-- Terminal App -->
+      <div @click="spawnTerminal" class="group flex flex-col items-center cursor-pointer transition-transform hover:-translate-y-2 origin-bottom">
+         <div class="w-14 h-14 bg-gradient-to-br from-zinc-700 to-zinc-900 rounded-[14px] flex items-center justify-center border border-white/20 shadow-xl relative overflow-hidden">
+            <div class="absolute inset-0 bg-black/20"></div>
+            <TerminalIcon class="w-7 h-7 text-white z-10" />
+            
+            <div class="absolute -top-1 -left-1 w-6 h-6 bg-white/10 rounded-full blur-md"></div>
+         </div>
+         <div class="w-1 h-1 bg-white/70 rounded-full mt-2" v-if="windows.some(w => w.type === 'terminal')"></div>
+      </div>
+      
+      <div class="w-px h-12 bg-white/10 mx-1"></div>
+      
+      <!-- Logs App -->
+      <div @click="spawnLogs" class="group flex flex-col items-center cursor-pointer transition-transform hover:-translate-y-2 origin-bottom">
+         <div class="w-14 h-14 bg-gradient-to-br from-blue-600 to-indigo-800 rounded-[14px] flex items-center justify-center border border-white/20 shadow-xl relative overflow-hidden">
+            <div class="absolute inset-0 bg-black/10"></div>
+            <FileText class="w-7 h-7 text-white z-10" />
+         </div>
+         <div class="w-1 h-1 bg-white/70 rounded-full mt-2" v-if="windows.some(w => w.type === 'log')"></div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -265,24 +339,22 @@ onUnmounted(() => {
   font-style: normal;
 }
 
-.scrollbar-hide::-webkit-scrollbar {
-    display: none;
+body {
+  margin: 0;
+  overflow: hidden;
 }
-.scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-}
+
 .xterm-viewport::-webkit-scrollbar {
-  width: 6px;
+  width: 10px;
 }
 .xterm-viewport::-webkit-scrollbar-thumb {
-  background: #ffffff10;
-  border-radius: 10px;
+  background: #ffffff20;
+  border-radius: 4px;
 }
 .xterm-viewport::-webkit-scrollbar-thumb:hover {
-  background: #ffffff20;
+  background: #ffffff40;
 }
 .xterm-screen {
-  opacity: 0.95;
+  opacity: 0.98;
 }
 </style>
