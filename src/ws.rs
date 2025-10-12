@@ -68,8 +68,13 @@ async fn handle_socket(mut socket: WebSocket, state: GlobalState) {
 
 async fn handle_client_event(event: WsEvent, state: GlobalState) {
     match event {
-        WsEvent::UserJoined { user } => {
-            state.data.lock().await.users.insert(user.id.clone(), user.clone());
+        WsEvent::UserJoined { mut user } => {
+            let mut data = state.data.lock().await;
+            // Assign color based on join order
+            let color_idx = (data.user_count as usize) % crate::state::USER_COLORS.len();
+            user.color = crate::state::USER_COLORS[color_idx].to_string();
+            data.user_count += 1;
+            data.users.insert(user.id.clone(), user.clone());
             let _ = state.tx.send(WsEvent::UserJoined { user });
         }
         WsEvent::UserLeft { id } => {
@@ -123,10 +128,37 @@ async fn handle_client_event(event: WsEvent, state: GlobalState) {
             state.data.lock().await.chats.push(msg.clone());
             let _ = state.tx.send(WsEvent::ChatMsg { msg });
         }
+        WsEvent::CreateChannel { name, created_by } => {
+            let id = name.to_lowercase().replace(' ', "-");
+            let ch = crate::state::Channel {
+                id: id.clone(),
+                name: format!("# {}", name),
+                created_by: created_by.clone(),
+            };
+            let mut data = state.data.lock().await;
+            if !data.channels.iter().any(|c| c.id == id) {
+                data.channels.push(ch.clone());
+            }
+            let _ = state.tx.send(WsEvent::ChannelCreated { channel: ch });
+        }
+        WsEvent::CanvasDraw { stroke } => {
+            let mut data = state.data.lock().await;
+            data.canvas_strokes
+                .entry(stroke.canvas_id.clone())
+                .or_insert_with(Vec::new)
+                .push(stroke.clone());
+            let _ = state.tx.send(WsEvent::CanvasDraw { stroke });
+        }
+        WsEvent::CanvasClear { canvas_id } => {
+            state.data.lock().await.canvas_strokes.remove(&canvas_id);
+            let _ = state.tx.send(WsEvent::CanvasClear { canvas_id });
+        }
         WsEvent::SetWorkspaceCount { count } => {
             state.data.lock().await.workspace_count = count;
             let _ = state.tx.send(WsEvent::SetWorkspaceCount { count });
         }
+
+
         WsEvent::RequestHistory { id } => {
             // We just dispatch history back through the broadcast. Clients filtering via 'id'.
             let hist = state.pty_history.lock().await;

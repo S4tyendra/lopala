@@ -9,6 +9,8 @@ mod io;
 mod tunnel;
 mod embed;
 mod state;
+mod files;
+
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
