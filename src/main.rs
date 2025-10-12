@@ -8,6 +8,7 @@ mod pty;
 mod io;
 mod tunnel;
 mod embed;
+mod state;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -44,7 +45,8 @@ async fn main() -> anyhow::Result<()> {
 
     // 4. Start HTTP Server (Blocking)
     info!("Lopala UI ready at http://localhost:{}", args.port);
-    server::start_server(args.port).await?;
+    let global_state = state::GlobalState::new();
+    server::start_server(args.port, global_state).await?;
 
     Ok(())
 }

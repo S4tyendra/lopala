@@ -6,15 +6,17 @@ use axum::{
 };
 use crate::embed::Assets;
 use crate::ws::ws_handler;
+use crate::state::GlobalState;
 use tower_http::cors::CorsLayer;
 use tracing::info;
 
 /// Boots the Axum server with WS and Embedded Assets
-pub async fn start_server(port: u16) -> anyhow::Result<()> {
+pub async fn start_server(port: u16, state: GlobalState) -> anyhow::Result<()> {
     let app = Router::new()
         .route("/_ws", get(ws_handler))
         .fallback(static_asset_handler)
-        .layer(CorsLayer::permissive());
+        .layer(CorsLayer::permissive())
+        .with_state(state);
 
     let listener = tokio::net::TcpListener::bind(&format!("0.0.0.0:{}", port)).await?;
     info!("HTTP Server listening on: {}", port);
