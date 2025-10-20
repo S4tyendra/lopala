@@ -5,8 +5,8 @@ use serde::{Serialize, Deserialize};
 
 // Shared color palette — assigned round-robin per user join order
 pub const USER_COLORS: &[&str] = &[
-    "#0a84ff", "#ff453a", "#30d158", "#ffd60a",
-    "#bf5af2", "#ff9f0a", "#64d2ff", "#ff6b6b",
+    "#60a5fa", "#34d399", "#fb923c", "#f472b6",
+    "#a78bfa", "#facc15", "#22d3ee", "#f87171",
 ];
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -93,8 +93,7 @@ impl GlobalState {
                 windows: HashMap::new(),
                 chats: Vec::new(),
                 channels: vec![
-                    Channel { id: "global".into(), name: "# global".into(), created_by: "system".into() },
-                    Channel { id: "general".into(), name: "# general".into(), created_by: "system".into() },
+                    Channel { id: "#".into(), name: "#".into(), created_by: "system".into() },
                 ],
                 workspace_count: 4,
                 canvas_strokes: HashMap::new(),
@@ -130,4 +129,5 @@ pub enum WsEvent {
     CanvasClear { canvas_id: String },
     CreateChannel { name: String, created_by: String },
     ChannelCreated { channel: Channel },
+    FileBrowse { win_id: String, path: String },
 }

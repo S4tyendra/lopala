@@ -21,7 +21,7 @@ pub async fn ws_handler(
 }
 
 async fn handle_socket(mut socket: WebSocket, state: GlobalState) {
-    info!("New client connected to multi-user environment");
+    info!("New client connected");
 
     // Send initial sync state
     {
@@ -34,12 +34,22 @@ async fn handle_socket(mut socket: WebSocket, state: GlobalState) {
     let (mut ws_sink, mut ws_stream) = socket.split();
     let mut rx = state.tx.subscribe();
 
-    // Broadcast dispatcher
+    // Per-client direct send channel (for history replies, etc.)
+    let (direct_tx, mut direct_rx) = mpsc::channel::<String>(64);
+
+    // Broadcast dispatcher + direct replies
     let mut broadcast_task = tokio::spawn(async move {
-        while let Ok(msg) = rx.recv().await {
-            if let Ok(json) = serde_json::to_string(&msg) {
-                if ws_sink.send(Message::Text(json)).await.is_err() {
-                    break;
+        loop {
+            tokio::select! {
+                // Direct (private) message to this client
+                Some(json) = direct_rx.recv() => {
+                    if ws_sink.send(Message::Text(json)).await.is_err() { break; }
+                }
+                // Broadcast from all others
+                Ok(msg) = rx.recv() => {
+                    if let Ok(json) = serde_json::to_string(&msg) {
+                        if ws_sink.send(Message::Text(json)).await.is_err() { break; }
+                    }
                 }
             }
         }
@@ -49,13 +59,10 @@ async fn handle_socket(mut socket: WebSocket, state: GlobalState) {
     let state_clone = state.clone();
     let mut ingress_task = tokio::spawn(async move {
         while let Some(Ok(msg)) = ws_stream.next().await {
-            match msg {
-                Message::Text(text) => {
-                    if let Ok(event) = serde_json::from_str::<WsEvent>(&text) {
-                        handle_client_event(event, state_clone.clone()).await;
-                    }
+            if let Message::Text(text) = msg {
+                if let Ok(event) = serde_json::from_str::<WsEvent>(&text) {
+                    handle_client_event(event, state_clone.clone(), direct_tx.clone()).await;
                 }
-                _ => {}
             }
         }
     });
@@ -66,7 +73,8 @@ async fn handle_socket(mut socket: WebSocket, state: GlobalState) {
     }
 }
 
-async fn handle_client_event(event: WsEvent, state: GlobalState) {
+
+async fn handle_client_event(event: WsEvent, state: GlobalState, direct_tx: mpsc::Sender<String>) {
     match event {
         WsEvent::UserJoined { mut user } => {
             let mut data = state.data.lock().await;
@@ -129,10 +137,11 @@ async fn handle_client_event(event: WsEvent, state: GlobalState) {
             let _ = state.tx.send(WsEvent::ChatMsg { msg });
         }
         WsEvent::CreateChannel { name, created_by } => {
-            let id = name.to_lowercase().replace(' ', "-");
+            // name is a raw emoji — store as-is
+            let id = name.clone();
             let ch = crate::state::Channel {
                 id: id.clone(),
-                name: format!("# {}", name),
+                name: name.clone(),
                 created_by: created_by.clone(),
             };
             let mut data = state.data.lock().await;
@@ -160,11 +169,18 @@ async fn handle_client_event(event: WsEvent, state: GlobalState) {
 
 
         WsEvent::RequestHistory { id } => {
-            // We just dispatch history back through the broadcast. Clients filtering via 'id'.
+            // Send ONLY to the requesting client — never broadcast.
+            // Prepend VT100 clear so the history replays cleanly.
             let hist = state.pty_history.lock().await;
             if let Some(data) = hist.get(&id) {
-                let _ = state.tx.send(WsEvent::HistoryData { id, data: data.clone() });
+                let payload = format!("\x1b[2J\x1b[H{}", data);
+                let json = serde_json::to_string(&WsEvent::HistoryData { id, data: payload }).unwrap_or_default();
+                let _ = direct_tx.send(json).await;
             }
+        }
+        WsEvent::FileBrowse { win_id, path } => {
+            // Relay file navigation to all OTHER clients for sync
+            let _ = state.tx.send(WsEvent::FileBrowse { win_id, path });
         }
         _ => {}
     }
