@@ -162,6 +162,10 @@ async fn handle_client_event(event: WsEvent, state: GlobalState, direct_tx: mpsc
             state.data.lock().await.canvas_strokes.remove(&canvas_id);
             let _ = state.tx.send(WsEvent::CanvasClear { canvas_id });
         }
+        WsEvent::CanvasLiveLine { canvas_id, user_id, color, size, from, to } => {
+            // Just rebroadcast — never stored
+            let _ = state.tx.send(WsEvent::CanvasLiveLine { canvas_id, user_id, color, size, from, to });
+        }
         WsEvent::SetWorkspaceCount { count } => {
             state.data.lock().await.workspace_count = count;
             let _ = state.tx.send(WsEvent::SetWorkspaceCount { count });
@@ -178,9 +182,8 @@ async fn handle_client_event(event: WsEvent, state: GlobalState, direct_tx: mpsc
                 let _ = direct_tx.send(json).await;
             }
         }
-        WsEvent::FileBrowse { win_id, path } => {
-            // Relay file navigation to all OTHER clients for sync
-            let _ = state.tx.send(WsEvent::FileBrowse { win_id, path });
+        WsEvent::FileBrowse { path } => {
+            let _ = state.tx.send(WsEvent::FileBrowse { path });
         }
         _ => {}
     }

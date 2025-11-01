@@ -7,6 +7,12 @@ use serde::{Serialize, Deserialize};
 pub const USER_COLORS: &[&str] = &[
     "#60a5fa", "#34d399", "#fb923c", "#f472b6",
     "#a78bfa", "#facc15", "#22d3ee", "#f87171",
+
+    "#93c5fd", "#6ee7b7", "#fdba74", "#f9a8d4",
+    "#c4b5fd", "#fde047", "#67e8f9", "#fca5a5",
+
+    "#bae6fd", "#bbf7d0", "#fed7aa", "#fbcfe8",
+    "#ddd6fe", "#fef08a", "#a5f3fc", "#fecaca",
 ];
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -127,7 +133,9 @@ pub enum WsEvent {
     UpdateTitle { id: String, title: String },
     CanvasDraw { stroke: CanvasStroke },
     CanvasClear { canvas_id: String },
+    // Live line segment — broadcast only, NOT stored in canvas_strokes history
+    CanvasLiveLine { canvas_id: String, user_id: String, color: String, size: f64, from: [f64; 2], to: [f64; 2] },
     CreateChannel { name: String, created_by: String },
     ChannelCreated { channel: Channel },
-    FileBrowse { win_id: String, path: String },
+    FileBrowse { path: String },
 }

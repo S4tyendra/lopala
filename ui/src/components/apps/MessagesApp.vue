@@ -7,18 +7,15 @@ const emit = defineEmits<{ (e: 'openChannel', channel: string): void }>()
 
 const input = ref('')
 const chatEl = ref<HTMLElement | null>(null)
-const showEmojiPicker = ref(false)
+const showPicker = ref(false)
 
-// Common emojis for channel creation
-const QUICK_EMOJIS = ['🔥','💬','🎯','🚀','📢','🎨','🧪','💡','🌍','🎵','🛠️','📸','🤝','⚡','🏆']
+const QUICK_EMOJIS = ['🔥','💬','🎯','🚀','📢','🎨','🧪','💡','🌍','🎵','🛠️','📸','🤝','⚡','🏆','👾','🦄','🍀','🎲','🔮']
 
 const myMessages = computed(() => chats.value.filter(c => c.channel === props.channel))
 
-watch(myMessages, () => {
-  nextTick(() => {
-    if (chatEl.value) chatEl.value.scrollTop = chatEl.value.scrollHeight
-  })
-})
+watch(myMessages, () => nextTick(() => {
+  if (chatEl.value) chatEl.value.scrollTop = chatEl.value.scrollHeight
+}), { immediate: true })
 
 const send = () => {
   const content = input.value.trim()
@@ -29,90 +26,101 @@ const send = () => {
 
 const createChannel = (emoji: string) => {
   wsSend({ type: 'CreateChannel', name: emoji, created_by: myName.value })
-  showEmojiPicker.value = false
+  showPicker.value = false
 }
 
-const currentChannel = computed(() => channels.value.find(c => c.id === props.channel))
+const activeChannel = computed(() => channels.value.find(c => c.id === props.channel))
+const myUser = computed(() => Object.values(users.value).find(u => u.id === myId.value))
 </script>
 
 <template>
-  <div class="absolute inset-0 flex" style="background:rgba(15,15,15,0.7)">
-    <!-- Channel Sidebar -->
-    <div class="w-16 flex flex-col items-center py-3 gap-1.5 shrink-0 border-r" style="background:rgba(0,0,0,0.3);border-color:rgba(255,255,255,0.05)">
-      <!-- Channel buttons (emoji only) -->
-      <button v-for="ch in channels" :key="ch.id"
+  <div class="absolute inset-0 flex" style="background:rgba(15,15,20,0.8)">
+
+    <!-- ── Slim channel sidebar (52px) ── -->
+    <div class="flex flex-col items-center pt-2 pb-2 gap-1.5 shrink-0"
+      style="width:52px;background:rgba(0,0,0,0.35);border-right:1px solid rgba(255,255,255,0.05)">
+
+      <!-- Channel buttons: emoji only, circular -->
+      <button
+        v-for="ch in channels" :key="ch.id"
         @click="emit('openChannel', ch.id)"
-        :title="ch.name"
+        :title="ch.id"
+        class="w-9 h-9 rounded-[12px] flex items-center justify-center text-[20px] cursor-pointer transition-all duration-150"
         :style="channel === ch.id
-          ? 'background:rgba(10,132,255,0.35);color:white;box-shadow:0 0 0 2px #0a84ff'
-          : 'color:rgba(255,255,255,0.6)'"
-        class="w-10 h-10 rounded-2xl flex items-center justify-center text-[22px] cursor-pointer transition-all duration-150 hover:brightness-125"
-        style="font-family:'SamsungColorEmoji','Noto Color Emoji',emoji">
+          ? 'background:rgba(96,165,250,0.25);box-shadow:0 0 0 1.5px #60a5fa;'
+          : 'background:rgba(255,255,255,0.04)'"
+        style="font-family:'SamsungOneUI','Noto Color Emoji',emoji">
         {{ ch.name }}
       </button>
 
-      <!-- Divider -->
-      <div class="w-6 h-px my-1" style="background:rgba(255,255,255,0.1)"></div>
+      <div class="w-6 h-px" style="background:rgba(255,255,255,0.08);margin:2px 0"/>
 
-      <!-- Add channel -->
+      <!-- Add channel with emoji picker -->
       <div class="relative">
-        <button @click="showEmojiPicker = !showEmojiPicker"
-          class="w-10 h-10 rounded-2xl flex items-center justify-center text-[20px] cursor-pointer transition-all duration-150 hover:brightness-125"
-          style="background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.4)">+</button>
+        <button @click.stop="showPicker = !showPicker"
+          class="w-9 h-9 rounded-[12px] flex items-center justify-center text-[16px] font-light cursor-pointer transition-all duration-150"
+          style="background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.4)"
+          title="New channel">
+          +
+        </button>
 
-        <!-- Emoji Picker Popup -->
-        <div v-if="showEmojiPicker"
-          class="absolute left-12 top-0 z-50 p-2 rounded-xl grid grid-cols-5 gap-1 shadow-2xl"
-          style="background:rgba(35,35,40,0.97);border:1px solid rgba(255,255,255,0.12);backdrop-filter:blur(12px);width:180px">
-          <button v-for="emoji in QUICK_EMOJIS" :key="emoji"
+        <!-- Emoji picker popup -->
+        <div v-if="showPicker"
+          @click.stop
+          class="absolute z-50 p-2 rounded-2xl grid gap-1 shadow-2xl"
+          style="left:52px;top:0;width:188px;grid-template-columns:repeat(5,1fr);background:rgba(30,30,36,0.98);border:1px solid rgba(255,255,255,0.1);backdrop-filter:blur(16px)">
+          <button
+            v-for="emoji in QUICK_EMOJIS" :key="emoji"
             @click="createChannel(emoji)"
             class="w-8 h-8 rounded-lg flex items-center justify-center text-[18px] cursor-pointer transition-[background] duration-100 hover:brightness-125"
-            style="font-family:'SamsungColorEmoji','Noto Color Emoji',emoji;background:rgba(255,255,255,0.05)">
+            style="background:rgba(255,255,255,0.04);font-family:'SamsungOneUI','Noto Color Emoji',emoji">
             {{ emoji }}
           </button>
         </div>
       </div>
 
-      <!-- Online users as colored dots at bottom -->
-      <div class="mt-auto flex flex-col items-center gap-1.5 pb-1">
-        <div v-for="u in Object.values(users)" :key="u.id"
-          :title="u.name"
-          class="w-3 h-3 rounded-full border border-black/30"
-          :style="{ background: u.color }"></div>
-      </div>
+      <!-- Spacer -->
+      <div class="flex-1"/>
+
+      <!-- Online users as color dots -->
+      <div v-for="u in Object.values(users)" :key="u.id"
+        :title="u.name"
+        class="w-2.5 h-2.5 rounded-full"
+        :style="{ background: u.color }"/>
     </div>
 
-    <!-- Chat Area -->
-    <div class="flex-1 flex flex-col overflow-hidden">
-      <!-- Channel header -->
-      <div class="h-9 flex items-center px-4 shrink-0 border-b" style="border-color:rgba(255,255,255,0.05);background:rgba(0,0,0,0.1)">
-        <span class="text-[18px] mr-2" style="font-family:'SamsungColorEmoji','Noto Color Emoji',emoji">{{ currentChannel?.name ?? '#' }}</span>
-        <span class="text-[12px]" style="color:rgba(255,255,255,0.35)">{{ Object.values(users).length }} online</span>
+    <!-- ── Chat area ── -->
+    <div class="flex-1 flex flex-col overflow-hidden min-w-0">
+
+      <!-- Header: channel name + online count -->
+      <div class="h-9 flex items-center gap-2 px-3 shrink-0 border-b" style="border-color:rgba(255,255,255,0.05);background:rgba(0,0,0,0.12)">
+        <span class="text-[19px]" style="font-family:'SamsungOneUI','Noto Color Emoji',emoji; line-height:1">{{ activeChannel?.name ?? '#' }}</span>
+        <span class="text-[11px]" style="color:rgba(255,255,255,0.25)">{{ Object.values(users).length }} online</span>
       </div>
 
       <!-- Messages -->
-      <div ref="chatEl" class="flex-1 overflow-y-auto p-4 flex flex-col gap-2">
+      <div ref="chatEl" class="flex-1 overflow-y-auto p-3 flex flex-col gap-2 min-w-0">
         <div v-for="msg in myMessages" :key="msg.id"
-          :class="['flex flex-col', msg.user_name === myName ? 'items-end' : 'items-start']"
-          style="animation: popIn 200ms cubic-bezier(0.175,0.885,0.32,1.1) both;">
-          <span class="text-[9px] mb-0.5 px-1" style="color:rgba(255,255,255,0.25)">{{ msg.user_name }}</span>
-          <div :class="['px-3 py-2 rounded-2xl text-[13px] leading-relaxed max-w-[75%]',
-            msg.user_name === myName ? 'rounded-br-[4px]' : 'rounded-bl-[4px]']"
+          :class="['flex flex-col min-w-0', msg.user_name === myName ? 'items-end' : 'items-start']"
+          style="animation:popIn 180ms cubic-bezier(0.175,0.885,0.32,1.1) both">
+          <span class="text-[9px] px-1 mb-0.5" style="color:rgba(255,255,255,0.22)">{{ msg.user_name }}</span>
+          <div class="px-3 py-2 rounded-2xl text-[13px] leading-relaxed max-w-[80%] break-words"
+            :class="msg.user_name === myName ? 'rounded-br-[4px]' : 'rounded-bl-[4px]'"
             :style="msg.user_name === myName
               ? 'background:#0a84ff;color:white'
-              : 'background:rgba(255,255,255,0.09);color:rgba(255,255,255,0.88)'">
+              : 'background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.88)'">
             {{ msg.content }}
           </div>
         </div>
       </div>
 
       <!-- Input -->
-      <div class="px-3 pb-3 pt-2 shrink-0" style="background:rgba(0,0,0,0.15)">
+      <div class="px-3 py-2.5 shrink-0 border-t" style="border-color:rgba(255,255,255,0.05);background:rgba(0,0,0,0.12)">
         <input v-model="input" @keyup.enter="send"
-          :placeholder="`Message ${currentChannel?.name ?? '#'}…`"
-          class="w-full rounded-2xl px-4 py-2 text-[13px] outline-none transition-[box-shadow] duration-150"
-          style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);color:white"
-          @focus="(e) => (e.target as HTMLInputElement).style.boxShadow='0 0 0 2px #0a84ff55'"
+          :placeholder="`Message ${activeChannel?.name ?? '#'}…`"
+          class="w-full rounded-2xl px-4 py-2 text-[13px] outline-none border transition-shadow duration-150"
+          style="background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.09);color:white"
+          @focus="(e) => (e.target as HTMLInputElement).style.boxShadow='0 0 0 2px rgba(96,165,250,0.4)'"
           @blur="(e) => (e.target as HTMLInputElement).style.boxShadow=''"
         />
       </div>

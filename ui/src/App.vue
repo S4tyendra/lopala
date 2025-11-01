@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import '@fontsource/jetbrains-mono/400.css'
+import '@fontsource/jetbrains-mono/500.css'
 import { ref, watch, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import MenuBar from './components/MenuBar.vue'
 import Dock from './components/Dock.vue'
@@ -15,8 +17,8 @@ import {
 } from './composables/useWs'
 import { visibleWindows, onDragMove, onDragEnd, focusWindow, nextZ } from './composables/useWindows'
 import { checkAndInitTerminals, writeToTerminal, disposeTerminal } from './composables/useTerminals'
-import { initFileState, cleanupFileState, loadFiles } from './composables/useFiles'
-import { drawStroke, clearCanvas, disposeCanvas } from './composables/useCanvas'
+import { initFileState, cleanupFileState, loadFiles, globalFilePath } from './composables/useFiles'
+import { drawStroke, clearCanvas, disposeCanvas, drawRemoteLine } from './composables/useCanvas'
 
 // ─── Clock ────────────────────────────────────────────────────────────────────
 const clock = ref('')
@@ -57,10 +59,12 @@ const handleEvent = (msg: any) => {
       break
     case 'SpawnWindow':
       windows.value[msg.window.id] = msg.window
+      // Auto-focus the new window immediately
+      msg.window.z = nextZ()
       nextTick(() => {
         const w = msg.window
         if (w.app === 'terminal') checkAndInitTerminals(currentWorkspace.value)
-        if (w.app === 'files') initFileState(w.id, '/home')
+        if (w.app === 'files') initFileState(w.id)
       })
       break
     case 'UpdateWindow':
@@ -102,14 +106,16 @@ const handleEvent = (msg: any) => {
     case 'CanvasDraw':
       drawStroke(msg.stroke)
       break
+    case 'CanvasLiveLine':
+      // Remote user live brush stroke — draw immediately
+      drawRemoteLine(msg.canvas_id, msg.from, msg.to, msg.color, msg.size)
+      break
     case 'CanvasClear':
       clearCanvas(msg.canvas_id)
       break
     case 'FileBrowse':
-      // Another user navigated — sync if we have the same window open
-      if (windows.value[msg.winId]?.app === 'files') {
-        loadFiles(msg.winId, msg.path, false)   // false = don't re-broadcast
-      }
+      // All clients navigate to same path
+      loadFiles(msg.path, true)   // localOnly=true prevents re-broadcast loop
       break
   }
 }
@@ -185,22 +191,18 @@ onUnmounted(() => {
 
 <template>
   <!-- ── Name Prompt ─────────────────────────────────────────────────────────── -->
-  <div v-if="showNamePrompt"
-    class="fixed inset-0 flex items-center justify-center"
+  <div v-if="showNamePrompt" class="fixed inset-0 flex items-center justify-center"
     style="z-index:2147483646;background:rgba(0,0,0,0.65);backdrop-filter:blur(8px)">
-    <div
-      class="rounded-2xl p-8 w-[360px] shadow-2xl"
+    <div class="rounded-2xl p-8 w-[360px] shadow-2xl"
       style="background:rgba(28,28,32,0.96);border:1px solid rgba(255,255,255,0.12);animation:winEnter 250ms cubic-bezier(0.23,1,0.32,1) both">
       <h2 class="text-white font-semibold text-[18px] mb-1">Welcome to Lopala</h2>
-      <p class="text-[13px] mb-6" style="color:rgba(255,255,255,0.4)">Enter a display name to join the shared workspace.</p>
-      <input v-model="nameInput" @keyup.enter="join"
-        placeholder="Your name"
-        autofocus
+      <p class="text-[13px] mb-6" style="color:rgba(255,255,255,0.4)">Enter a display name to join the shared workspace.
+      </p>
+      <input v-model="nameInput" @keyup.enter="join" placeholder="Your name" autofocus
         class="w-full rounded-xl px-4 py-3 text-[14px] text-white outline-none mb-4 transition-[box-shadow] duration-150"
         style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1)"
-        @focus="(e) => (e.target as HTMLInputElement).style.boxShadow='0 0 0 2px #0a84ff66'"
-        @blur="(e) => (e.target as HTMLInputElement).style.boxShadow=''"
-      />
+        @focus="(e) => (e.target as HTMLInputElement).style.boxShadow = '0 0 0 2px #0a84ff66'"
+        @blur="(e) => (e.target as HTMLInputElement).style.boxShadow = ''" />
       <button @click="join"
         class="w-full py-3 rounded-xl text-white font-semibold text-[14px] transition-[filter] duration-150 hover:brightness-110 active:scale-[0.97]"
         style="background:#0a84ff">
@@ -210,10 +212,8 @@ onUnmounted(() => {
   </div>
 
   <!-- ── Desktop ─────────────────────────────────────────────────────────────── -->
-  <div
-    class="fixed inset-0 overflow-hidden select-none"
-    style="background:url('https://images.unsplash.com/photo-1619252584172-a83a8bd57fbe?q=80&w=2048&auto=format&fit=crop') center/cover"
-  >
+  <div class="fixed inset-0 overflow-hidden select-none"
+    style="background:url('https://images.unsplash.com/photo-1619252584172-a83a8bd57fbe?q=80&w=2048&auto=format&fit=crop') center/cover">
     <!-- Menu Bar (z: 2147483640) -->
     <MenuBar :clock="clock" :active-app="activeApp" />
 
@@ -222,25 +222,13 @@ onUnmounted(() => {
 
     <!-- Windows layer -->
     <div class="absolute inset-0 top-7 bottom-20">
-      <WindowFrame
-        v-for="win in visibleWindows"
-        :key="win.id"
-        :win="win"
-        @mousedown="focusWindow(win.id)"
-      >
+      <WindowFrame v-for="win in visibleWindows" :key="win.id" :win="win" @mousedown="focusWindow(win.id)">
         <TerminalApp v-if="win.app === 'terminal'" :win-id="win.id" />
-        <FilesApp    v-else-if="win.app === 'files'"    :win-id="win.id" />
-        <MessagesApp v-else-if="win.app === 'messages'"
-          :win-id="win.id"
-          :channel="win.channel ?? 'global'"
-          @open-channel="(ch) => openChannel(win.id, ch)"
-        />
-        <CanvasApp v-else-if="win.app === 'canvas'"
-          :win-id="win.id"
-          :canvas-id="win.canvasId ?? win.id"
-          :win-w="win.w"
-          :win-h="win.h"
-        />
+        <FilesApp v-else-if="win.app === 'files'" :win-id="win.id" />
+        <MessagesApp v-else-if="win.app === 'messages'" :win-id="win.id" :channel="win.channel ?? 'global'"
+          @open-channel="(ch) => openChannel(win.id, ch)" />
+        <CanvasApp v-else-if="win.app === 'canvas'" :win-id="win.id" :canvas-id="win.canvasId ?? win.id" :win-w="win.w"
+          :win-h="win.h" />
       </WindowFrame>
     </div>
 
@@ -256,13 +244,18 @@ onUnmounted(() => {
   src: url('/fonts/SamsungOneUI.ttf') format('truetype');
   font-display: swap;
 }
+
 @font-face {
   font-family: 'JetBrains Mono Nerd Font';
-  src: url('/fonts/JetBrainsMono-Regular.ttf') format('truetype');
+  src: url('/fonts/JetBrainsMonoNerdFont.ttf') format('truetype');
   font-display: swap;
 }
 
-*, *::before, *::after { box-sizing: border-box; }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
 
 body {
   margin: 0;
@@ -272,25 +265,55 @@ body {
 }
 
 /* Emoji elements use Samsung font first */
-.emoji, [data-emoji] {
+.emoji,
+[data-emoji] {
   font-family: 'SamsungOneUI', 'SamsungColorEmoji', 'Noto Color Emoji', emoji;
 }
 
 @keyframes winEnter {
-  from { opacity: 0; transform: scale(0.94) translateY(6px); }
-  to   { opacity: 1; transform: scale(1) translateY(0); }
+  from {
+    opacity: 0;
+    transform: scale(0.94) translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
 @keyframes popIn {
-  from { opacity: 0; transform: scale(0.88); }
-  to   { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.88);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.28); }
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
 
 /* xterm overrides */
-.xterm-viewport::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); }
+.xterm-viewport::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+}
 </style>
