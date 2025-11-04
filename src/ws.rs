@@ -182,8 +182,8 @@ async fn handle_client_event(event: WsEvent, state: GlobalState, direct_tx: mpsc
                 let _ = direct_tx.send(json).await;
             }
         }
-        WsEvent::FileBrowse { path } => {
-            let _ = state.tx.send(WsEvent::FileBrowse { path });
+        WsEvent::FileSync { state: file_state } => {
+            let _ = state.tx.send(WsEvent::FileSync { state: file_state });
         }
         _ => {}
     }

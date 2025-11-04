@@ -1,0 +1,137 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <radialGradient id="bg-grad" cx="50%" cy="0%" r="100%">
+      <stop offset="0%" stop-color="#160b24" />
+      <stop offset="100%" stop-color="#05020a" />
+    </radialGradient>
+
+    <!-- Filters -->
+    <filter id="blur-heavy" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="120" />
+    </filter>
+    
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+
+    <filter id="glow-subtle" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+
+    <!-- Premium Matte Noise Texture -->
+    <filter id="noise">
+      <feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="3" stitchTiles="stitch" result="turbulence"/>
+      <feColorMatrix type="matrix" values="
+        0 0 0 0 1
+        0 0 0 0 1
+        0 0 0 0 1
+        0.04 0 0 0 0" in="turbulence" />
+    </filter>
+
+    <!-- Canyon Fill Gradients -->
+    <linearGradient id="c1" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#2d1b54"/>
+      <stop offset="100%" stop-color="#090a0f"/>
+    </linearGradient>
+
+    <linearGradient id="c2" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#7a2871"/>
+      <stop offset="50%" stop-color="#3b1d60"/>
+      <stop offset="100%" stop-color="#0d0415"/>
+    </linearGradient>
+
+    <linearGradient id="c3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff2a7a"/>
+      <stop offset="40%" stop-color="#b31260"/>
+      <stop offset="100%" stop-color="#1a0b2e"/>
+    </linearGradient>
+
+    <linearGradient id="c4" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#5a1846"/>
+      <stop offset="60%" stop-color="#1a082c"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </linearGradient>
+
+    <linearGradient id="c5" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1c0d2e"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </linearGradient>
+
+    <!-- Edge Highlight Gradients -->
+    <linearGradient id="eg1" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00f2fe" stop-opacity="0.8"/>
+      <stop offset="50%" stop-color="#4facfe" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#4facfe" stop-opacity="0"/>
+    </linearGradient>
+
+    <linearGradient id="eg2" x1="100%" y1="0%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#ff7eb3" stop-opacity="0.9"/>
+      <stop offset="50%" stop-color="#ff758c" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#ff758c" stop-opacity="0"/>
+    </linearGradient>
+
+    <linearGradient id="eg3" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="1"/>
+      <stop offset="20%" stop-color="#ffb6ff" stop-opacity="0.9"/>
+      <stop offset="60%" stop-color="#ff2a7a" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#ff2a7a" stop-opacity="0"/>
+    </linearGradient>
+
+    <linearGradient id="eg4" x1="100%" y1="0%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#d8b4fe" stop-opacity="0.8"/>
+      <stop offset="60%" stop-color="#a855f7" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#a855f7" stop-opacity="0"/>
+    </linearGradient>
+
+    <linearGradient id="eg5" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#7e22ce" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#3b0764" stop-opacity="0"/>
+    </linearGradient>
+
+    <linearGradient id="horizon" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00f2fe" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#ffffff" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#ff2a7a" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Base Background -->
+  <rect width="100%" height="100%" fill="url(#bg-grad)" />
+
+  <!-- Ambient Glowing Orbs (Depth & Lighting) -->
+  <circle cx="200" cy="200" r="600" fill="#00f2fe" filter="url(#blur-heavy)" opacity="0.15" />
+  <circle cx="1500" cy="500" r="700" fill="#ff2a7a" filter="url(#blur-heavy)" opacity="0.2" />
+  <circle cx="400" cy="1000" r="500" fill="#7a2871" filter="url(#blur-heavy)" opacity="0.2" />
+
+  <!-- Distant Horizon Light Ray -->
+  <path d="M -100,250 Q 960,400 2020,150" fill="none" stroke="url(#horizon)" stroke-width="2" filter="url(#glow-subtle)" />
+
+  <!-- Layer 1: Back Left Canyon -->
+  <path d="M -100,350 C 300,400 600,600 1000,550 C 1400,500 1700,300 2100,250 L 2100,1200 L -100,1200 Z" fill="url(#c1)" />
+  <path d="M -100,350 C 300,400 600,600 1000,550 C 1400,500 1700,300 2100,250" fill="none" stroke="url(#eg1)" stroke-width="3" filter="url(#glow-subtle)" />
+
+  <!-- Layer 2: Back Right Canyon -->
+  <path d="M 2100,400 C 1700,550 1300,700 900,650 C 500,600 200,450 -100,400 L -100,1200 L 2100,1200 Z" fill="url(#c2)" />
+  <path d="M 2100,400 C 1700,550 1300,700 900,650 C 500,600 200,450 -100,400" fill="none" stroke="url(#eg2)" stroke-width="3" filter="url(#glow-subtle)" />
+
+  <!-- Layer 3: Mid Left Canyon (The Hero / Focal Point) -->
+  <path d="M -100,600 C 300,750 600,950 1000,900 C 1400,850 1700,650 2100,500 L 2100,1200 L -100,1200 Z" fill="url(#c3)" />
+  <!-- Hero Edge Glow -->
+  <path d="M -100,600 C 300,750 600,950 1000,900 C 1400,850 1700,650 2100,500" fill="none" stroke="url(#eg3)" stroke-width="5" filter="url(#glow)" />
+  <!-- Hero Edge Crisp Core -->
+  <path d="M -100,600 C 300,750 600,950 1000,900 C 1400,850 1700,650 2100,500" fill="none" stroke="#ffffff" stroke-width="1.5" opacity="0.8" />
+
+  <!-- Layer 4: Front Right Canyon -->
+  <path d="M 2100,750 C 1600,900 1200,1100 800,1050 C 400,1000 100,850 -100,800 L -100,1200 L 2100,1200 Z" fill="url(#c4)" />
+  <path d="M 2100,750 C 1600,900 1200,1100 800,1050 C 400,1000 100,850 -100,800" fill="none" stroke="url(#eg4)" stroke-width="3" filter="url(#glow-subtle)" />
+
+  <!-- Layer 5: Absolute Foreground Canyon -->
+  <path d="M -100,1000 C 200,1100 500,1200 900,1150 C 1300,1100 1700,950 2100,900 L 2100,1200 L -100,1200 Z" fill="url(#c5)" />
+  <path d="M -100,1000 C 200,1100 500,1200 900,1150 C 1300,1100 1700,950 2100,900" fill="none" stroke="url(#eg5)" stroke-width="2" />
+
+  <!-- Premium Matte Noise Overlay (Prevents banding, adds Apple-like texture) -->
+  <rect width="100%" height="100%" filter="url(#noise)" pointer-events="none" />
+</svg>

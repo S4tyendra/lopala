@@ -3,10 +3,10 @@ import { windows } from '../composables/useWs'
 import { spawnWindow } from '../composables/useWindows'
 
 const APPS = [
-  { id: 'files',    label: 'Finder',   bg: '#1a6ef5', emoji: '📁' },
-  { id: 'terminal', label: 'Terminal', bg: '#1a1a1a', emoji: '⌨️' },
-  { id: 'messages', label: 'Messages', bg: '#28a745', emoji: '💬' },
-  { id: 'canvas',   label: 'Canvas',   bg: '#7c3aed', emoji: '🎨' },
+  { id: 'files',    label: 'Finder',   bg: '#1a6ef5', path: '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>' },
+  { id: 'terminal', label: 'Terminal', bg: '#1a1a1a', path: '<polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/>' },
+  { id: 'messages', label: 'Messages', bg: '#28a745', path: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>' },
+  { id: 'canvas',   label: 'Canvas',   bg: '#7c3aed', path: '<path d="M12 21a9 9 0 0 1-9-9c0-5 4-9 9-9 5 0 9 4 9 9 0 2-1 3-3 3h-1c-1 0-2 1-2 2v1c0 1-1 2-2 2zm-5-9A1.5 1.5 0 1 1 5.5 12 1.5 1.5 0 0 1 7 12zm9 0a1.5 1.5 0 1 1-1.5-1.5A1.5 1.5 0 0 1 16 12zm-4-4a1.5 1.5 0 1 1-1.5-1.5A1.5 1.5 0 0 1 12 8z"/>' },
 ]
 
 const hasWindow = (app: string) => Object.values(windows.value).some(w => w.app === app)
@@ -50,9 +50,8 @@ const open = (id: string) => {
         @mouseenter="(e) => { (e.currentTarget as HTMLElement).style.transform='scale(1.3) translateY(-8px)'; (e.currentTarget as HTMLElement).style.margin='0 8px' }"
         @mouseleave="(e) => { (e.currentTarget as HTMLElement).style.transform=''; (e.currentTarget as HTMLElement).style.margin='' }"
       >
-        <span class="text-2xl leading-none" style="font-family:'SamsungOneUI','SamsungColorEmoji','Noto Color Emoji',emoji">
-          {{ app.emoji }}
-        </span>
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+          class="drop-shadow-sm" v-html="app.path"></svg>
         <!-- Running dot -->
         <div v-if="hasWindow(app.id)"
           class="absolute w-1 h-1 rounded-full bg-white/70"

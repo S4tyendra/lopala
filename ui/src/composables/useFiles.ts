@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import type { FileEntry } from '../types'
 import { wsSend, windows } from './useWs'
 
@@ -6,90 +6,122 @@ export interface FileState {
   path: string
   entries: FileEntry[]
   loading: boolean
-  selected: Set<string>       // selected paths
+  selected: Set<string>
   clipboard: { op: 'copy' | 'cut'; paths: string[] } | null
-  preview: { entry: FileEntry; content: string } | null  // '__no_preview__' | '__embed__' | text
+  preview: { path: string; content: string } | null
   viewMode: 'grid' | 'list'
   contextMenu: { x: number; y: number; entry: FileEntry | null } | null
+  scrollTop: number
+  renaming: { path: string; name: string } | null
 }
 
-const states = ref<Record<string, FileState>>({})
-export const fileStates = states
+export interface FileStateSync {
+  path: string
+  selected: string[]
+  scroll_top: number
+  renaming: { path: string; name: string } | null
+  clipboard_op: string | null
+  clipboard_paths: string[]
+  preview_path: string | null
+}
 
-// Global current path — ALL file windows share same navigation
-export const globalFilePath = ref('/home')
+const defaultState: FileState = {
+  path: '/home',
+  entries: [],
+  loading: false,
+  selected: new Set(),
+  clipboard: null,
+  preview: null,
+  viewMode: 'grid',
+  contextMenu: null,
+  scrollTop: 0,
+  renaming: null,
+}
 
-function defaultState(): FileState {
-  return {
-    path: globalFilePath.value,
-    entries: [],
-    loading: false,
-    selected: new Set(),
-    clipboard: null,
-    preview: null,
-    viewMode: 'grid',
-    contextMenu: null,
+export const globalFileState = ref<FileState>({ ...defaultState })
+let isApplyingRemoteSync = false
+
+export function initFileState() {
+  loadFiles(globalFileState.value.path, true)
+}
+
+export function broadcastFileState() {
+  if (isApplyingRemoteSync) return
+  const s = globalFileState.value
+  const sync: FileStateSync = {
+    path: s.path,
+    selected: Array.from(s.selected),
+    scroll_top: s.scrollTop,
+    renaming: s.renaming,
+    clipboard_op: s.clipboard?.op ?? null,
+    clipboard_paths: s.clipboard?.paths ?? [],
+    preview_path: s.preview?.path ?? null,
   }
+  wsSend({ type: 'FileSync', state: sync })
 }
 
-export function initFileState(winId: string) {
-  if (!states.value[winId]) states.value[winId] = defaultState()
-  loadFiles(globalFilePath.value, true)
-}
+export async function applyRemoteFileState(sync: FileStateSync) {
+  isApplyingRemoteSync = true
+  const s = globalFileState.value
 
-export function cleanupFileState(winId: string) {
-  delete states.value[winId]
-}
+  if (s.path !== sync.path) {
+    await loadFiles(sync.path, true)
+  }
 
-// Navigate ALL file windows to the same path
-export async function loadFiles(path: string, localOnly = false) {
-  globalFilePath.value = path
+  s.selected = new Set(sync.selected)
+  s.scrollTop = sync.scroll_top
+  s.renaming = sync.renaming
 
-  // Navigate every open file window
-  const winIds = Object.entries(windows.value)
-    .filter(([, w]) => w.app === 'files')
-    .map(([id]) => id)
+  if (sync.clipboard_op) {
+    s.clipboard = { op: sync.clipboard_op as 'copy'|'cut', paths: sync.clipboard_paths }
+  } else {
+    s.clipboard = null
+  }
 
-  for (const id of winIds) {
-    if (!states.value[id]) states.value[id] = defaultState()
-    const s = states.value[id]
-    s.path = path
-    s.loading = true
-    s.selected = new Set()
+  if (sync.preview_path) {
+    if (s.preview?.path !== sync.preview_path) {
+      const entry = s.entries.find(e => e.path === sync.preview_path)
+      if (entry) await openEntry(entry, true)
+    }
+  } else {
     s.preview = null
-    s.contextMenu = null
   }
+
+  isApplyingRemoteSync = false
+}
+
+export async function loadFiles(path: string, localOnly = false) {
+  const s = globalFileState.value
+  s.path = path
+  s.loading = true
+  s.selected = new Set()
+  s.preview = null
+  s.contextMenu = null
+  s.scrollTop = 0
+  s.renaming = null
+  
+  if (!localOnly) broadcastFileState()
 
   try {
     const res = await fetch(`/api/files?path=${encodeURIComponent(path)}`)
     if (!res.ok) throw new Error(await res.text())
     const entries: FileEntry[] = await res.json()
-
-    for (const id of winIds) {
-      if (states.value[id]) {
-        states.value[id].entries = entries
-        states.value[id].loading = false
-      }
-    }
-
-    if (!localOnly) wsSend({ type: 'FileBrowse', path })
+    // Sort directories first
+    s.entries = entries.sort((a, b) => {
+      if (a.is_dir !== b.is_dir) return a.is_dir ? -1 : 1
+      return a.name.localeCompare(b.name)
+    })
   } catch (err) {
     console.error('loadFiles:', err)
-    for (const id of winIds) {
-      if (states.value[id]) states.value[id].loading = false
-    }
+  } finally {
+    s.loading = false
   }
 }
 
-// Open entry: dir = navigate, file = preview
-export async function openEntry(entry: FileEntry) {
+export async function openEntry(entry: FileEntry, localOnly = false) {
   if (entry.is_dir) { loadFiles(entry.path); return }
 
-  // Find all file windows and set preview
-  const winIds = Object.entries(windows.value)
-    .filter(([, w]) => w.app === 'files')
-    .map(([id]) => id)
-
+  const s = globalFileState.value
   const m = entry.mime
   let content = ''
 
@@ -104,12 +136,9 @@ export async function openEntry(entry: FileEntry) {
     content = '__no_preview__'
   }
 
-  for (const id of winIds) {
-    if (states.value[id]) states.value[id].preview = { entry, content }
-  }
+  s.preview = { path: entry.path, content }
+  if (!localOnly) broadcastFileState()
 }
-
-// ── File operations ───────────────────────────────────────────────────────────
 
 export async function renameFile(oldPath: string, newName: string) {
   const dir = oldPath.split('/').slice(0, -1).join('/') || '/'
@@ -118,10 +147,10 @@ export async function renameFile(oldPath: string, newName: string) {
     const res = await fetch('/api/files/rename', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ old_path: oldPath, new_path: newPath }),
+      body: JSON.stringify({ path: oldPath, name: newName }),
     })
     if (!res.ok) throw new Error(await res.text())
-    await loadFiles(globalFilePath.value, false)
+    await loadFiles(globalFileState.value.path)  // broadcasts
   } catch (e) { alert(`Rename failed: ${e}`) }
 }
 
@@ -135,7 +164,7 @@ export async function deleteFiles(paths: string[]) {
       })
     } catch {}
   }
-  await loadFiles(globalFilePath.value, false)
+  await loadFiles(globalFileState.value.path)
 }
 
 export async function copyFiles(paths: string[], destDir: string) {
@@ -145,11 +174,11 @@ export async function copyFiles(paths: string[], destDir: string) {
       await fetch('/api/files/copy', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ src: path, dst: `${destDir}/${name}` }),
-      })
+        body: JSON.stringify({ from: path, to: `${destDir}/${name}` }),
+    })
     } catch {}
   }
-  await loadFiles(globalFilePath.value, false)
+  await loadFiles(globalFileState.value.path)
 }
 
 export async function moveFiles(paths: string[], destDir: string) {
@@ -159,11 +188,11 @@ export async function moveFiles(paths: string[], destDir: string) {
       await fetch('/api/files/move', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ src: path, dst: `${destDir}/${name}` }),
+        body: JSON.stringify({ from: path, to: `${destDir}/${name}` }),
       })
     } catch {}
   }
-  await loadFiles(globalFilePath.value, false)
+  await loadFiles(globalFileState.value.path)
 }
 
 export function fileIcon(entry: FileEntry): string {

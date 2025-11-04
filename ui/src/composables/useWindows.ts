@@ -107,9 +107,18 @@ export function spawnWindow(app: string, extra: Partial<AppWindow> = {}): string
 
 export const visibleWindows = computed(() =>
   Object.values(windows.value)
-    .filter(w => w.workspace === currentWorkspace.value && !w.minimized)
+    .filter(w => w.workspace === currentWorkspace.value)
     .sort((a, b) => a.z - b.z)
 )
+
+export const minimizedSlots = computed(() => {
+  const mins = Object.values(windows.value)
+    .filter(w => w.workspace === currentWorkspace.value && w.minimized)
+    .sort((a, b) => a.z - b.z)
+  const map = new Map<string, number>()
+  mins.forEach((w, i) => map.set(w.id, i))
+  return map
+})
 
 // ─── Drag / Resize (screen-space deltas, stored as logical) ──────────────────
 interface DragState { active: boolean; winId: string; startX: number; startY: number; origLX: number; origLY: number }

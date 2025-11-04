@@ -67,6 +67,17 @@ pub struct CanvasStroke {
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct FileStateSync {
+    pub path: String,
+    pub selected: Vec<String>,
+    pub scroll_top: f64,
+    pub renaming: Option<(String, String)>,
+    pub clipboard_op: Option<String>,
+    pub clipboard_paths: Vec<String>,
+    pub preview_path: Option<String>,
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct AppStateData {
     pub users: HashMap<String, User>,
     pub windows: HashMap<String, Window>,
@@ -137,5 +148,5 @@ pub enum WsEvent {
     CanvasLiveLine { canvas_id: String, user_id: String, color: String, size: f64, from: [f64; 2], to: [f64; 2] },
     CreateChannel { name: String, created_by: String },
     ChannelCreated { channel: Channel },
-    FileBrowse { path: String },
+    FileSync { state: FileStateSync },
 }

@@ -17,7 +17,7 @@ import {
 } from './composables/useWs'
 import { visibleWindows, onDragMove, onDragEnd, focusWindow, nextZ } from './composables/useWindows'
 import { checkAndInitTerminals, writeToTerminal, disposeTerminal } from './composables/useTerminals'
-import { initFileState, cleanupFileState, loadFiles, globalFilePath } from './composables/useFiles'
+import { initFileState, loadFiles, applyRemoteFileState } from './composables/useFiles'
 import { drawStroke, clearCanvas, disposeCanvas, drawRemoteLine } from './composables/useCanvas'
 
 // ─── Clock ────────────────────────────────────────────────────────────────────
@@ -64,7 +64,7 @@ const handleEvent = (msg: any) => {
       nextTick(() => {
         const w = msg.window
         if (w.app === 'terminal') checkAndInitTerminals(currentWorkspace.value)
-        if (w.app === 'files') initFileState(w.id)
+        if (w.app === 'files') initFileState()
       })
       break
     case 'UpdateWindow':
@@ -79,7 +79,6 @@ const handleEvent = (msg: any) => {
     case 'CloseWindow': {
       const w = windows.value[msg.id]
       if (w?.app === 'terminal') disposeTerminal(msg.id)
-      if (w?.app === 'files') cleanupFileState(msg.id)
       if (w?.app === 'canvas' && w.canvasId) disposeCanvas(w.canvasId)
       delete windows.value[msg.id]
       break
@@ -113,9 +112,8 @@ const handleEvent = (msg: any) => {
     case 'CanvasClear':
       clearCanvas(msg.canvas_id)
       break
-    case 'FileBrowse':
-      // All clients navigate to same path
-      loadFiles(msg.path, true)   // localOnly=true prevents re-broadcast loop
+    case 'FileSync':
+      applyRemoteFileState(msg.state)
       break
   }
 }
@@ -212,8 +210,7 @@ onUnmounted(() => {
   </div>
 
   <!-- ── Desktop ─────────────────────────────────────────────────────────────── -->
-  <div class="fixed inset-0 overflow-hidden select-none"
-    style="background:url('https://images.unsplash.com/photo-1619252584172-a83a8bd57fbe?q=80&w=2048&auto=format&fit=crop') center/cover">
+  <div class="fixed inset-0 overflow-hidden select-none" style="background:url('/bg.svg') center/cover">
     <!-- Menu Bar (z: 2147483640) -->
     <MenuBar :clock="clock" :active-app="activeApp" />
 
