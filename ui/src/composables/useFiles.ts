@@ -1,6 +1,6 @@
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import type { FileEntry } from '../types'
-import { wsSend, windows } from './useWs'
+import { wsSend } from './useWs'
 
 export interface FileState {
   path: string
@@ -25,7 +25,7 @@ export interface FileStateSync {
   preview_path: string | null
 }
 
-const defaultState: FileState = {
+export const globalFileState = ref<FileState>({
   path: '/home',
   entries: [],
   loading: false,
@@ -36,9 +36,8 @@ const defaultState: FileState = {
   contextMenu: null,
   scrollTop: 0,
   renaming: null,
-}
+})
 
-export const globalFileState = ref<FileState>({ ...defaultState })
 let isApplyingRemoteSync = false
 
 export function initFileState() {
@@ -52,7 +51,7 @@ export function broadcastFileState() {
     path: s.path,
     selected: Array.from(s.selected),
     scroll_top: s.scrollTop,
-    renaming: s.renaming,
+    renaming: s.renaming ? { path: s.renaming.path, name: s.renaming.name } : null,
     clipboard_op: s.clipboard?.op ?? null,
     clipboard_paths: s.clipboard?.paths ?? [],
     preview_path: s.preview?.path ?? null,
@@ -64,19 +63,18 @@ export async function applyRemoteFileState(sync: FileStateSync) {
   isApplyingRemoteSync = true
   const s = globalFileState.value
 
+  // Path changed — fetch new listing first, THEN apply rest of state
   if (s.path !== sync.path) {
-    await loadFiles(sync.path, true)
+    await _fetchAndSetEntries(sync.path)
   }
 
   s.selected = new Set(sync.selected)
   s.scrollTop = sync.scroll_top
-  s.renaming = sync.renaming
+  s.renaming = sync.renaming ? { ...sync.renaming } : null
 
-  if (sync.clipboard_op) {
-    s.clipboard = { op: sync.clipboard_op as 'copy'|'cut', paths: sync.clipboard_paths }
-  } else {
-    s.clipboard = null
-  }
+  s.clipboard = sync.clipboard_op
+    ? { op: sync.clipboard_op as 'copy' | 'cut', paths: sync.clipboard_paths }
+    : null
 
   if (sync.preview_path) {
     if (s.preview?.path !== sync.preview_path) {
@@ -90,23 +88,15 @@ export async function applyRemoteFileState(sync: FileStateSync) {
   isApplyingRemoteSync = false
 }
 
-export async function loadFiles(path: string, localOnly = false) {
+// Internal: fetch entries and set path — does NOT touch selection/scroll/etc
+async function _fetchAndSetEntries(path: string) {
   const s = globalFileState.value
   s.path = path
   s.loading = true
-  s.selected = new Set()
-  s.preview = null
-  s.contextMenu = null
-  s.scrollTop = 0
-  s.renaming = null
-  
-  if (!localOnly) broadcastFileState()
-
   try {
     const res = await fetch(`/api/files?path=${encodeURIComponent(path)}`)
     if (!res.ok) throw new Error(await res.text())
     const entries: FileEntry[] = await res.json()
-    // Sort directories first
     s.entries = entries.sort((a, b) => {
       if (a.is_dir !== b.is_dir) return a.is_dir ? -1 : 1
       return a.name.localeCompare(b.name)
@@ -118,8 +108,26 @@ export async function loadFiles(path: string, localOnly = false) {
   }
 }
 
+// Public: full navigation — resets selection, broadcasts to all peers
+export async function loadFiles(path: string, localOnly = false) {
+  const s = globalFileState.value
+  s.selected = new Set()
+  s.preview = null
+  s.contextMenu = null
+  s.scrollTop = 0
+  s.renaming = null
+
+  await _fetchAndSetEntries(path)
+
+  // Broadcast AFTER entries are loaded so peers get the full new path
+  if (!localOnly) broadcastFileState()
+}
+
 export async function openEntry(entry: FileEntry, localOnly = false) {
-  if (entry.is_dir) { loadFiles(entry.path); return }
+  if (entry.is_dir) {
+    await loadFiles(entry.path)   // always broadcasts
+    return
+  }
 
   const s = globalFileState.value
   const m = entry.mime
@@ -141,8 +149,6 @@ export async function openEntry(entry: FileEntry, localOnly = false) {
 }
 
 export async function renameFile(oldPath: string, newName: string) {
-  const dir = oldPath.split('/').slice(0, -1).join('/') || '/'
-  const newPath = `${dir}/${newName}`
   try {
     const res = await fetch('/api/files/rename', {
       method: 'POST',
@@ -150,48 +156,43 @@ export async function renameFile(oldPath: string, newName: string) {
       body: JSON.stringify({ path: oldPath, name: newName }),
     })
     if (!res.ok) throw new Error(await res.text())
-    await loadFiles(globalFileState.value.path)  // broadcasts
+    // Reload current dir and broadcast immediately — fixes "stuck at old name" for peers
+    await loadFiles(globalFileState.value.path)
   } catch (e) { alert(`Rename failed: ${e}`) }
 }
 
 export async function deleteFiles(paths: string[]) {
-  for (const path of paths) {
-    try {
-      await fetch('/api/files/delete', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ path }),
-      })
-    } catch {}
-  }
+  await Promise.all(paths.map(path =>
+    fetch('/api/files/delete', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ path }),
+    }).catch(() => {})
+  ))
   await loadFiles(globalFileState.value.path)
 }
 
 export async function copyFiles(paths: string[], destDir: string) {
-  for (const path of paths) {
+  await Promise.all(paths.map(path => {
     const name = path.split('/').pop()!
-    try {
-      await fetch('/api/files/copy', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ from: path, to: `${destDir}/${name}` }),
-    })
-    } catch {}
-  }
+    return fetch('/api/files/copy', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ from: path, to: `${destDir}/${name}` }),
+    }).catch(() => {})
+  }))
   await loadFiles(globalFileState.value.path)
 }
 
 export async function moveFiles(paths: string[], destDir: string) {
-  for (const path of paths) {
+  await Promise.all(paths.map(path => {
     const name = path.split('/').pop()!
-    try {
-      await fetch('/api/files/move', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ from: path, to: `${destDir}/${name}` }),
-      })
-    } catch {}
-  }
+    return fetch('/api/files/move', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ from: path, to: `${destDir}/${name}` }),
+    }).catch(() => {})
+  }))
   await loadFiles(globalFileState.value.path)
 }
 

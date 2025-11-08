@@ -15,7 +15,7 @@ import {
   myId, myName, myColor, showNamePrompt, windows, users, chats,
   channels, currentWorkspace, workspaceCount, wsSend, connectWs, canvasHistory,
 } from './composables/useWs'
-import { visibleWindows, onDragMove, onDragEnd, focusWindow, nextZ } from './composables/useWindows'
+import { visibleWindows, onDragMove, onDragEnd, focusWindow, nextZ, syncZTop, minimizedSlots } from './composables/useWindows'
 import { checkAndInitTerminals, writeToTerminal, disposeTerminal } from './composables/useTerminals'
 import { initFileState, loadFiles, applyRemoteFileState } from './composables/useFiles'
 import { drawStroke, clearCanvas, disposeCanvas, drawRemoteLine } from './composables/useCanvas'
@@ -59,8 +59,7 @@ const handleEvent = (msg: any) => {
       break
     case 'SpawnWindow':
       windows.value[msg.window.id] = msg.window
-      // Auto-focus the new window immediately
-      msg.window.z = nextZ()
+      syncZTop(msg.window.z)  // keep local zTop in sync with server-assigned z
       nextTick(() => {
         const w = msg.window
         if (w.app === 'terminal') checkAndInitTerminals(currentWorkspace.value)
@@ -69,9 +68,8 @@ const handleEvent = (msg: any) => {
       break
     case 'UpdateWindow':
       if (windows.value[msg.window.id]) {
-        // Don't overwrite z if we just set it locally (focus)
-        const local = windows.value[msg.window.id]
-        Object.assign(local, msg.window)
+        Object.assign(windows.value[msg.window.id], msg.window)
+        syncZTop(msg.window.z)  // keep zTop consistent across all clients
       } else {
         windows.value[msg.window.id] = msg.window
       }

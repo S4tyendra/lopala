@@ -4,7 +4,9 @@ import { windows, currentWorkspace, wsSend } from './useWs'
 import { LOGICAL_W, LOGICAL_H } from '../types'
 
 let zTop = 1000
-
+// zTop tracks the highest z across all windows that THIS client has seen.
+// On SpawnWindow / UpdateWindow we also sync it upward so it never drifts.
+export function syncZTop(z: number) { if (z > zTop) zTop = z }
 export function nextZ() { return ++zTop }
 
 // ─── Scale helpers for cross-resolution sync ─────────────────────────────────
@@ -55,7 +57,11 @@ export function broadcastWin(win: AppWindow) {
 
 export function focusWindow(id: string) {
   const win = windows.value[id]
-  if (!win) return
+  if (!win || win.minimized) return
+  // Always beat every currently-visible window
+  const maxZ = Object.values(windows.value).reduce((m, w) => Math.max(m, w.z), zTop)
+  if (win.z === maxZ && maxZ === zTop) return  // already on top, no-op
+  zTop = maxZ
   win.z = nextZ()
   broadcastWin(win)
 }
