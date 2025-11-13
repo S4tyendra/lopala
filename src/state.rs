@@ -75,6 +75,8 @@ pub struct FileStateSync {
     pub clipboard_op: Option<String>,
     pub clipboard_paths: Vec<String>,
     pub preview_path: Option<String>,
+    pub version: u64,
+    pub sender: String,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]

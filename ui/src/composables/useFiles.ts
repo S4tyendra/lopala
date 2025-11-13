@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import type { FileEntry } from '../types'
-import { wsSend } from './useWs'
+import { wsSend, myId } from './useWs'
 
 export interface FileState {
   path: string
@@ -13,6 +13,7 @@ export interface FileState {
   contextMenu: { x: number; y: number; entry: FileEntry | null } | null
   scrollTop: number
   renaming: { path: string; name: string } | null
+  version: number
 }
 
 export interface FileStateSync {
@@ -23,6 +24,8 @@ export interface FileStateSync {
   clipboard_op: string | null
   clipboard_paths: string[]
   preview_path: string | null
+  version: number
+  sender: string
 }
 
 export const globalFileState = ref<FileState>({
@@ -36,9 +39,14 @@ export const globalFileState = ref<FileState>({
   contextMenu: null,
   scrollTop: 0,
   renaming: null,
+  version: 0,
 })
 
 let isApplyingRemoteSync = false
+
+export function bumpVersion() {
+  globalFileState.value.version++
+}
 
 export function initFileState() {
   loadFiles(globalFileState.value.path, true)
@@ -55,18 +63,25 @@ export function broadcastFileState() {
     clipboard_op: s.clipboard?.op ?? null,
     clipboard_paths: s.clipboard?.paths ?? [],
     preview_path: s.preview?.path ?? null,
+    version: s.version,
+    sender: myId.value,
   }
   wsSend({ type: 'FileSync', state: sync })
 }
 
 export async function applyRemoteFileState(sync: FileStateSync) {
+  // Ignore echo of our own events
+  if (sync.sender === myId.value) return
+
   isApplyingRemoteSync = true
   const s = globalFileState.value
 
-  // Path changed — fetch new listing first, THEN apply rest of state
-  if (s.path !== sync.path) {
+  // Path changed OR version increased (mutation) — fetch new listing first
+  if (s.path !== sync.path || sync.version > s.version) {
     await _fetchAndSetEntries(sync.path)
   }
+
+  s.version = sync.version
 
   s.selected = new Set(sync.selected)
   s.scrollTop = sync.scroll_top
@@ -156,6 +171,7 @@ export async function renameFile(oldPath: string, newName: string) {
       body: JSON.stringify({ path: oldPath, name: newName }),
     })
     if (!res.ok) throw new Error(await res.text())
+    bumpVersion()
     // Reload current dir and broadcast immediately — fixes "stuck at old name" for peers
     await loadFiles(globalFileState.value.path)
   } catch (e) { alert(`Rename failed: ${e}`) }
@@ -169,6 +185,7 @@ export async function deleteFiles(paths: string[]) {
       body: JSON.stringify({ path }),
     }).catch(() => {})
   ))
+  bumpVersion()
   await loadFiles(globalFileState.value.path)
 }
 
@@ -181,6 +198,7 @@ export async function copyFiles(paths: string[], destDir: string) {
       body: JSON.stringify({ from: path, to: `${destDir}/${name}` }),
     }).catch(() => {})
   }))
+  bumpVersion()
   await loadFiles(globalFileState.value.path)
 }
 
@@ -193,6 +211,7 @@ export async function moveFiles(paths: string[], destDir: string) {
       body: JSON.stringify({ from: path, to: `${destDir}/${name}` }),
     }).catch(() => {})
   }))
+  bumpVersion()
   await loadFiles(globalFileState.value.path)
 }
 

@@ -6,7 +6,7 @@ import {
   fileIcon, fileSizeHuman, formatDate,
 } from '../../composables/useFiles'
 import { spawnWindow } from '../../composables/useWindows'
-import { currentWorkspace } from '../../composables/useWs'
+import { currentWorkspace, wsSend } from '../../composables/useWs'
 
 onMounted(() => initFileState())
 onUnmounted(() => { if (s.value) s.value.contextMenu = null })
@@ -159,9 +159,7 @@ const terminalHere = () => {
   closeContextMenu()
   // Tiny delay to ensure PTY is ready on backend, then send 'cd path\n'
   setTimeout(() => {
-    import('../../composables/useWs').then(m => {
-      m.wsSend({ type: 'PtyIn', id, data: `cd "${s.value.path}" && clear\r` })
-    })
+    wsSend({ type: 'PtyIn', id, data: `cd "${s.value.path}" && clear\r` })
   }, 200)
 }
 

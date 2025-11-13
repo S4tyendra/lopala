@@ -27,7 +27,7 @@ const restoreMin = () => {
 
 <template>
   <div
-    class="absolute flex flex-col overflow-hidden transition-all duration-300"
+    class="absolute flex flex-col overflow-hidden transition-[left,top,width,height,opacity,background,border-radius] duration-300"
     :style="isMin ? {
       left: '20px',
       top: `calc(100% - ${90 + (slot ?? 0) * 50}px)`,
