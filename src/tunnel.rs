@@ -17,7 +17,7 @@ impl Tunnel {
         info!("Starting cloudflared tunnel on port {}...", port);
         
         let url = format!("http://127.0.0.1:{}", port);
-        let mut child = Command::new("./cloudflared")
+        let mut child = Command::new("cloudflared")
             .args(["tunnel", "--url", &url])
             .stdout(Stdio::piped())
             .stderr(Stdio::piped()) // cloudflared logs usually go to stderr

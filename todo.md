@@ -1,0 +1,22 @@
+# 🚀 Lopala Web OS Upcoming Features
+
+- [ ] **New App: CodeMirror 6 Based Text Editor**
+  - Full syntax highlighting (shiki integration).
+  - Multi-user collaborative editing (CRDT/WebSocket sync).
+  - Open/Save to project directory.
+- [ ] **File Management Enhancements**
+  - Drag-and-drop file uploads directly into `FilesApp`.
+  - Multi-file selection actions (bulk delete/move).
+- [ ] **New App: Task Manager**
+  - Process monitoring (top/htop style).
+  - Resource usage graphs (CPU, Memory).
+  - Kill process capability.
+- [ ] **New App: Docker Manager**
+  - Container listing and management (start, stop, logs).
+  - Image management.
+  - Integration with the terminal for `exec` commands.
+- [ ] **Clipboard Sync Across Sessions**
+  - Unified clipboard state shared between all connected users.
+  - Ability to "copy" in one window and "paste" into another user's session.
+- [ ] **Spotlight / Global Search**
+  - `Cmd+K` interface for finding files, opening apps, and switching channels.

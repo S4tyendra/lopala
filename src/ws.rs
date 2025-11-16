@@ -57,11 +57,14 @@ async fn handle_socket(mut socket: WebSocket, state: GlobalState) {
 
     // Ingress receiver
     let state_clone = state.clone();
+    let current_user_id = Arc::new(tokio::sync::Mutex::new(None));
+    let current_user_id_ctrl = current_user_id.clone();
+    
     let mut ingress_task = tokio::spawn(async move {
         while let Some(Ok(msg)) = ws_stream.next().await {
             if let Message::Text(text) = msg {
                 if let Ok(event) = serde_json::from_str::<WsEvent>(&text) {
-                    handle_client_event(event, state_clone.clone(), direct_tx.clone()).await;
+                    handle_client_event(event, state_clone.clone(), direct_tx.clone(), current_user_id_ctrl.clone()).await;
                 }
             }
         }
@@ -71,10 +74,21 @@ async fn handle_socket(mut socket: WebSocket, state: GlobalState) {
         _ = (&mut broadcast_task) => ingress_task.abort(),
         _ = (&mut ingress_task) => broadcast_task.abort(),
     }
+
+    // Cleanup on disconnect
+    let id_to_remove = current_user_id.lock().await.clone();
+    if let Some(id) = id_to_remove {
+        info!("Client disconnected: removing user {}", id);
+        let mut data = state.data.lock().await;
+        if data.users.remove(&id).is_some() {
+            drop(data);
+            let _ = state.tx.send(WsEvent::UserLeft { id });
+        }
+    }
 }
 
 
-async fn handle_client_event(event: WsEvent, state: GlobalState, direct_tx: mpsc::Sender<String>) {
+async fn handle_client_event(event: WsEvent, state: GlobalState, direct_tx: mpsc::Sender<String>, current_user_id: Arc<tokio::sync::Mutex<Option<String>>>) {
     match event {
         WsEvent::UserJoined { mut user } => {
             let mut data = state.data.lock().await;
@@ -83,6 +97,10 @@ async fn handle_client_event(event: WsEvent, state: GlobalState, direct_tx: mpsc
             user.color = crate::state::USER_COLORS[color_idx].to_string();
             data.user_count += 1;
             data.users.insert(user.id.clone(), user.clone());
+            
+            // Set for disconnect cleanup
+            *current_user_id.lock().await = Some(user.id.clone());
+            
             let _ = state.tx.send(WsEvent::UserJoined { user });
         }
         WsEvent::UserLeft { id } => {
