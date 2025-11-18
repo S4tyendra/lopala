@@ -1,13 +1,15 @@
 use tokio::process::{Command, Child};
 use tokio::io::{BufReader, AsyncBufReadExt};
-use tracing::{info, warn, error};
+use tracing::info;
 use std::process::Stdio;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
 /// Manages the cloudflared tunnel lifecycle and scrapes the public URL
 pub struct Tunnel {
+    #[allow(dead_code)]
     pub process: Child,
+    #[allow(dead_code)]
     pub public_url: Arc<Mutex<Option<String>>>,
 }
 
@@ -16,10 +18,10 @@ impl Tunnel {
     pub async fn start(port: u16) -> anyhow::Result<Self> {
         info!("Starting cloudflared tunnel on port {}...", port);
         
-        let url = format!("http://127.0.0.1:{}", port);
+        let url = format!("http://localhost:{}", port);
         let mut child = Command::new("cloudflared")
             .args(["tunnel", "--url", &url])
-            .stdout(Stdio::piped())
+            .stdout(Stdio::null())
             .stderr(Stdio::piped()) // cloudflared logs usually go to stderr
             .spawn()?;
 
@@ -37,9 +39,10 @@ impl Tunnel {
                     if let Some(end) = part.find(".trycloudflare.com") {
                         let final_url = &part[..end + 18];
                         let mut lock = url_clone.lock().await;
-                        *lock = Some(final_url.to_string());
-                        info!("Tunnel Online: {}", final_url);
-                        break;
+                        if lock.is_none() {
+                            *lock = Some(final_url.to_string());
+                            info!("Tunnel Online: {}", final_url);
+                        }
                     }
                 }
                 // Optional: stop scraping if we found it or if it errors

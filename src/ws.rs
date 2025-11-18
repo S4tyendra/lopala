@@ -251,7 +251,11 @@ async fn spawn_pty(window_id: String, state: GlobalState) {
             if let Ok(path) = std::fs::read_link(format!("/proc/{}/cwd", pid)) {
                 let p = path.to_string_lossy().to_string();
                 let short_p = if p.len() > 20 {
-                    format!("...{}", &p[p.len()-17..])
+                    let mut start = p.len() - 17;
+                    while start < p.len() && !p.is_char_boundary(start) {
+                        start += 1;
+                    }
+                    format!("...{}", &p[start..])
                 } else { p };
                 let title = format!("{}@{} {}", user, host, short_p);
                 
@@ -281,7 +285,11 @@ async fn spawn_pty(window_id: String, state: GlobalState) {
                         let s = hist.entry(win_id.clone()).or_insert_with(String::new);
                         s.push_str(&text);
                         if s.len() > 50000 {
-                            *s = s[s.len()-50000..].to_string();
+                            let mut start = s.len() - 50000;
+                            while start < s.len() && !s.is_char_boundary(start) {
+                                start += 1;
+                            }
+                            *s = s[start..].to_string();
                         }
                     }
                     let _ = state_clone.tx.send(WsEvent::PtyOut { id: win_id.clone(), data: text });

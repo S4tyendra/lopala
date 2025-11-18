@@ -38,12 +38,20 @@ async fn main() -> anyhow::Result<()> {
     info!("Starting Lopala Terminal Server...");
 
     // 3. (Optional) Run Cloudflare Tunnel
-    if args.tunnel {
+    let _tunnel = if args.tunnel {
         match tunnel::Tunnel::start(args.port).await {
-            Ok(_) => info!("Public tunnel initiated."),
-            Err(e) => info!("Could not start tunnel: {}. Ensure cloudflared binary is in current dir.", e),
+            Ok(t) => {
+                info!("Public tunnel initiated.");
+                Some(t)
+            },
+            Err(e) => {
+                info!("Could not start tunnel: {}. Ensure cloudflared binary is in current dir.", e);
+                None
+            }
         }
-    }
+    } else {
+        None
+    };
 
     // 4. Start HTTP Server (Blocking)
     info!("Lopala UI ready at http://localhost:{}", args.port);

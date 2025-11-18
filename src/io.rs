@@ -88,5 +88,4 @@ pub fn prepare_pty_stream(fd: RawFd) -> anyhow::Result<(ReadHalf<AsyncPty>, Writ
     Ok(split(pty))
 }
 
-pub type PtyReader = ReadHalf<AsyncPty>;
-pub type PtyWriter = WriteHalf<AsyncPty>;
+
