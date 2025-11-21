@@ -203,6 +203,9 @@ async fn handle_client_event(event: WsEvent, state: GlobalState, direct_tx: mpsc
         WsEvent::FileSync { state: file_state } => {
             let _ = state.tx.send(WsEvent::FileSync { state: file_state });
         }
+        WsEvent::ScreenshotSync { state: screenshot_state } => {
+            let _ = state.tx.send(WsEvent::ScreenshotSync { state: screenshot_state });
+        }
         _ => {}
     }
 }

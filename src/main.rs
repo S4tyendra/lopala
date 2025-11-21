@@ -10,6 +10,7 @@ mod tunnel;
 mod embed;
 mod state;
 mod files;
+mod screenshot;
 
 
 #[derive(Parser, Debug)]

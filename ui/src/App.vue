@@ -10,6 +10,7 @@ import TerminalApp from './components/apps/TerminalApp.vue'
 import FilesApp from './components/apps/FilesApp.vue'
 import MessagesApp from './components/apps/MessagesApp.vue'
 import CanvasApp from './components/apps/CanvasApp.vue'
+import ScreenshotApp from './components/apps/ScreenshotApp.vue'
 
 import {
   myId, myName, myColor, showNamePrompt, windows, users, chats,
@@ -19,6 +20,7 @@ import { visibleWindows, onDragMove, onDragEnd, focusWindow, nextZ, syncZTop, mi
 import { checkAndInitTerminals, writeToTerminal, disposeTerminal } from './composables/useTerminals'
 import { initFileState, loadFiles, applyRemoteFileState } from './composables/useFiles'
 import { drawStroke, clearCanvas, disposeCanvas, drawRemoteLine } from './composables/useCanvas'
+import { applyRemoteScreenshotState } from './composables/useScreenshot'
 
 // ─── Clock ────────────────────────────────────────────────────────────────────
 const clock = ref('')
@@ -26,7 +28,7 @@ const updateClock = () => { clock.value = new Date().toLocaleTimeString([], { ho
 
 // ─── Active app for menu bar ──────────────────────────────────────────────────
 const activeApp = ref('Finder')
-const APP_NAMES: Record<string, string> = { terminal: 'Terminal', files: 'Finder', messages: 'Messages', canvas: 'Canvas' }
+const APP_NAMES: Record<string, string> = { terminal: 'Terminal', files: 'Finder', messages: 'Messages', canvas: 'Canvas', screenshot: 'Screenshot' }
 
 // ─── WS Event Handler ─────────────────────────────────────────────────────────
 const handleEvent = (msg: any) => {
@@ -112,6 +114,9 @@ const handleEvent = (msg: any) => {
       break
     case 'FileSync':
       applyRemoteFileState(msg.state)
+      break
+    case 'ScreenshotSync':
+      applyRemoteScreenshotState(msg.state)
       break
   }
 }
@@ -224,6 +229,7 @@ onUnmounted(() => {
           @open-channel="(ch) => openChannel(win.id, ch)" />
         <CanvasApp v-else-if="win.app === 'canvas'" :win-id="win.id" :canvas-id="win.canvasId ?? win.id" :win-w="win.w"
           :win-h="win.h" />
+        <ScreenshotApp v-else-if="win.app === 'screenshot'" :win-id="win.id" />
       </WindowFrame>
     </div>
 

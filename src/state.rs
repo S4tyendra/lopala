@@ -74,7 +74,15 @@ pub struct FileStateSync {
     pub renaming: Option<(String, String)>,
     pub clipboard_op: Option<String>,
     pub clipboard_paths: Vec<String>,
-    pub preview_path: Option<String>,
+    pub version: u64,
+    pub sender: String,
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct ScreenshotStateSync {
+    pub display: Option<String>,
+    pub opened_image: Option<String>,
+    pub scroll_top: f64,
     pub version: u64,
     pub sender: String,
 }
@@ -151,4 +159,5 @@ pub enum WsEvent {
     CreateChannel { name: String, created_by: String },
     ChannelCreated { channel: Channel },
     FileSync { state: FileStateSync },
+    ScreenshotSync { state: ScreenshotStateSync },
 }
