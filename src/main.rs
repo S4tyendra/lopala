@@ -39,6 +39,12 @@ async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
     info!("Starting Lopala Terminal Server...");
 
+    // Clean the ephemeral live-stream dir on every startup
+    let live_dir = "/tmp/lopala/live";
+    let _ = std::fs::remove_dir_all(live_dir);
+    std::fs::create_dir_all(live_dir).unwrap_or_default();
+    info!("Cleared live stream dir: {}", live_dir);
+
     // 3. (Optional) Run Cloudflare Tunnel
     let _tunnel = if args.tunnel {
         match tunnel::Tunnel::start(args.port).await {
@@ -55,10 +61,17 @@ async fn main() -> anyhow::Result<()> {
         None
     };
 
-    // 4. Start HTTP Server (Blocking)
+    // 4. Start HTTP Server (with graceful CTRL-C cleanup)
     info!("Lopala UI ready at http://localhost:{}", args.port);
     let global_state = state::GlobalState::new();
-    server::start_server(args.port, global_state).await?;
+
+    tokio::select! {
+        res = server::start_server(args.port, global_state) => { res? }
+        _ = tokio::signal::ctrl_c() => {
+            info!("Shutting down — clearing live stream dir");
+            let _ = std::fs::remove_dir_all(live_dir);
+        }
+    }
 
     Ok(())
 }
