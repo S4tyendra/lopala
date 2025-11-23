@@ -12,6 +12,7 @@ use std::os::unix::io::AsRawFd;
 use crate::pty::Pty;
 use crate::io::{prepare_pty_stream};
 use crate::state::{GlobalState, WsEvent, PtyHandle};
+use crate::screencast::spawn_stream;
 
 pub async fn ws_handler(
     ws: WebSocketUpgrade,
@@ -205,6 +206,29 @@ async fn handle_client_event(event: WsEvent, state: GlobalState, direct_tx: mpsc
         }
         WsEvent::ScreenshotSync { state: screenshot_state } => {
             let _ = state.tx.send(WsEvent::ScreenshotSync { state: screenshot_state });
+        }
+        WsEvent::StartStream { display } => {
+            let mut tasks = state.stream_tasks.lock().await;
+            if let Some((count, _)) = tasks.get_mut(&display) {
+                // Already streaming — just bump watcher count
+                *count += 1;
+            } else {
+                // First watcher — spawn the grim loop
+                let handle = spawn_stream(display.clone(), state.clone());
+                let abort = handle.abort_handle();
+                tasks.insert(display, (1, abort));
+            }
+        }
+        WsEvent::StopStream { display } => {
+            let mut tasks = state.stream_tasks.lock().await;
+            if let Some((count, _)) = tasks.get_mut(&display) {
+                *count = count.saturating_sub(1);
+                if *count == 0 {
+                    if let Some((_, abort)) = tasks.remove(&display) {
+                        abort.abort();
+                    }
+                }
+            }
         }
         _ => {}
     }

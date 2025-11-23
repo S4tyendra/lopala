@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{broadcast, Mutex, mpsc};
+use tokio::task::AbortHandle;
 use serde::{Serialize, Deserialize};
 
 // Shared color palette — assigned round-robin per user join order
@@ -109,6 +110,8 @@ pub struct GlobalState {
     pub tx: broadcast::Sender<WsEvent>,
     pub pty_history: Arc<Mutex<HashMap<String, String>>>,
     pub ptys: Arc<Mutex<HashMap<String, PtyHandle>>>,
+    // display -> (watcher_count, abort_handle)
+    pub stream_tasks: Arc<Mutex<HashMap<String, (u32, AbortHandle)>>>,
 }
 
 impl GlobalState {
@@ -129,6 +132,7 @@ impl GlobalState {
             tx,
             pty_history: Arc::new(Mutex::new(HashMap::new())),
             ptys: Arc::new(Mutex::new(HashMap::new())),
+            stream_tasks: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 }
@@ -160,4 +164,8 @@ pub enum WsEvent {
     ChannelCreated { channel: Channel },
     FileSync { state: FileStateSync },
     ScreenshotSync { state: ScreenshotStateSync },
+    // Screen view streaming
+    StartStream { display: String },
+    StopStream { display: String },
+    ScreenFrame { display: String, path: String },
 }

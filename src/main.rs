@@ -11,6 +11,7 @@ mod embed;
 mod state;
 mod files;
 mod screenshot;
+mod screencast;
 
 
 #[derive(Parser, Debug)]

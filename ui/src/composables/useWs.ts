@@ -32,7 +32,7 @@ function buildUrl() {
   return `${proto}//${location.host}/_ws`
 }
 
-export function connectWs(onEvent: (msg: any) => void) {
+export function connectWs(onEvent: (msg: any) => void, callbacks?: { onOpen?: () => void; onClose?: () => void }) {
   if (ws.value && ws.value.readyState < 2) ws.value.close()
 
   const socket = new WebSocket(buildUrl())
@@ -43,6 +43,7 @@ export function connectWs(onEvent: (msg: any) => void) {
       type: 'UserJoined',
       user: { id: myId.value, name: myName.value, x: 0, y: 0, workspace: currentWorkspace.value, color: '' }
     }))
+    callbacks?.onOpen?.()
   }
 
   socket.onmessage = (e) => {
@@ -50,8 +51,9 @@ export function connectWs(onEvent: (msg: any) => void) {
   }
 
   socket.onclose = () => {
+    callbacks?.onClose?.()
     // Reconnect after 2s
-    reconnectTimer = setTimeout(() => connectWs(onEvent), 2000)
+    reconnectTimer = setTimeout(() => connectWs(onEvent, callbacks), 2000)
   }
 }
 

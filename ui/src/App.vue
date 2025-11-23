@@ -11,6 +11,8 @@ import FilesApp from './components/apps/FilesApp.vue'
 import MessagesApp from './components/apps/MessagesApp.vue'
 import CanvasApp from './components/apps/CanvasApp.vue'
 import ScreenshotApp from './components/apps/ScreenshotApp.vue'
+import ScreenViewApp from './components/apps/ScreenViewApp.vue'
+import Notifications from './components/Notifications.vue'
 
 import {
   myId, myName, myColor, showNamePrompt, windows, users, chats,
@@ -21,6 +23,7 @@ import { checkAndInitTerminals, writeToTerminal, disposeTerminal } from './compo
 import { initFileState, loadFiles, applyRemoteFileState } from './composables/useFiles'
 import { drawStroke, clearCanvas, disposeCanvas, drawRemoteLine } from './composables/useCanvas'
 import { applyRemoteScreenshotState } from './composables/useScreenshot'
+import { notif } from './composables/useNotifications'
 
 // ─── Clock ────────────────────────────────────────────────────────────────────
 const clock = ref('')
@@ -28,7 +31,10 @@ const updateClock = () => { clock.value = new Date().toLocaleTimeString([], { ho
 
 // ─── Active app for menu bar ──────────────────────────────────────────────────
 const activeApp = ref('Finder')
-const APP_NAMES: Record<string, string> = { terminal: 'Terminal', files: 'Finder', messages: 'Messages', canvas: 'Canvas', screenshot: 'Screenshot' }
+const APP_NAMES: Record<string, string> = {
+  terminal: 'Terminal', files: 'Finder', messages: 'Messages',
+  canvas: 'Canvas', screenshot: 'Screenshot', screenview: 'Screen View',
+}
 
 // ─── WS Event Handler ─────────────────────────────────────────────────────────
 const handleEvent = (msg: any) => {
@@ -48,9 +54,13 @@ const handleEvent = (msg: any) => {
     case 'UserJoined':
       users.value[msg.user.id] = msg.user
       if (msg.user.id === myId.value) myColor.value = msg.user.color
+      else notif.userJoined(msg.user.name || msg.user.id)
       break
     case 'UserLeft':
-      delete users.value[msg.id]
+      if (users.value[msg.id]) {
+        notif.userLeft(users.value[msg.id].name || msg.id)
+        delete users.value[msg.id]
+      }
       break
     case 'CursorMove':
       if (msg.id !== myId.value && users.value[msg.id]) {
@@ -126,7 +136,10 @@ const nameInput = ref('')
 const join = () => {
   myName.value = nameInput.value.trim() || `user_${myId.value.substring(0, 4)}`
   showNamePrompt.value = false
-  connectWs(handleEvent)
+  connectWs(handleEvent, {
+    onOpen: () => notif.wsConnected(),
+    onClose: () => notif.wsDisconnected(),
+  })
 }
 
 // ─── Mouse event handlers (global) ───────────────────────────────────────────
@@ -230,8 +243,12 @@ onUnmounted(() => {
         <CanvasApp v-else-if="win.app === 'canvas'" :win-id="win.id" :canvas-id="win.canvasId ?? win.id" :win-w="win.w"
           :win-h="win.h" />
         <ScreenshotApp v-else-if="win.app === 'screenshot'" :win-id="win.id" />
+        <ScreenViewApp v-else-if="win.app === 'screenview'" :win-id="win.id" />
       </WindowFrame>
     </div>
+
+    <!-- Notifications (z: 2147483645 — just below cursor layer) -->
+    <Notifications />
 
     <!-- Dock (z: 2147483630) -->
     <Dock />
