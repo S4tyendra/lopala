@@ -2,6 +2,7 @@
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { channels, wsSend } from '../composables/useWs'
 import { nextZ } from '../composables/useWindows'
+import { loadFiles } from '../composables/useFiles'
 
 // ─── Visibility ───────────────────────────────────────────────────────────────
 const open = ref(false)
@@ -121,6 +122,7 @@ const openChannel = (chId: string, chName: string) => {
 
 const openFile = (path: string) => {
   const dir = path.replace(/\/[^/]+$/, '') || '/'
+  loadFiles(dir) // Tell Files app to natively load the path
   wsSend({
     type: 'SpawnWindow',
     window: {
@@ -214,7 +216,7 @@ onUnmounted(() => {
               <input ref="inputEl" v-model="query"
                 placeholder="Search apps, files, channels…"
                 class="flex-1 bg-transparent outline-none text-[15px] text-white placeholder-white/30 font-medium"
-                @keydown.stop />
+              />
               <div v-if="searching" class="w-3.5 h-3.5 border-2 rounded-full animate-spin flex-none"
                 style="border-color:rgba(255,255,255,0.3); border-top-color:rgba(255,255,255,0.8)" />
               <kbd class="text-[10px] px-1.5 py-0.5 rounded font-mono flex-none"
