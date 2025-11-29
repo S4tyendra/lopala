@@ -12,6 +12,7 @@ mod state;
 mod files;
 mod screenshot;
 mod screencast;
+mod search;
 
 
 #[derive(Parser, Debug)]

@@ -10,6 +10,7 @@ export default defineConfig({
   integrations: [vue()],
 
   vite: {
-    plugins: [tailwindcss()]
+    plugins: [tailwindcss()],
+    assetsInclude: ['**/*.glsl', '**/*.vert', '**/*.frag'],
   }
 });

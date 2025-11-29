@@ -9,6 +9,7 @@ use crate::ws::ws_handler;
 use crate::state::GlobalState;
 use crate::files::{list_files, move_file, copy_file, rename_file, delete_file, download_file, read_file_text};
 use crate::screenshot::{get_displays, take_screenshot};
+use crate::search::search_files;
 use tower_http::cors::CorsLayer;
 use tracing::info;
 
@@ -23,7 +24,9 @@ pub async fn start_server(port: u16, state: GlobalState) -> anyhow::Result<()> {
         .route("/files/download", get(download_file))
         .route("/files/read", get(read_file_text))
         .route("/displays", get(get_displays))
-        .route("/screenshots/take", post(take_screenshot));
+        .route("/screenshots/take", post(take_screenshot))
+        .route("/search", get(search_files));
+
 
     let app = Router::new()
         .route("/_ws", get(ws_handler))

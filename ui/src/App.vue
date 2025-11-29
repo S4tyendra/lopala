@@ -13,6 +13,7 @@ import CanvasApp from './components/apps/CanvasApp.vue'
 import ScreenshotApp from './components/apps/ScreenshotApp.vue'
 import ScreenViewApp from './components/apps/ScreenViewApp.vue'
 import Notifications from './components/Notifications.vue'
+import SpotlightSearch from './components/SpotlightSearch.vue'
 
 import {
   myId, myName, myColor, showNamePrompt, windows, users, chats,
@@ -249,6 +250,9 @@ onUnmounted(() => {
 
     <!-- Notifications (z: 2147483645 — just below cursor layer) -->
     <Notifications />
+
+    <!-- Spotlight search (Ctrl+K / Cmd+K) -->
+    <SpotlightSearch />
 
     <!-- Dock (z: 2147483630) -->
     <Dock />
