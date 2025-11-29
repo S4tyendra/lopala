@@ -7,9 +7,12 @@ import {
 } from '../../composables/useFiles'
 import { spawnWindow } from '../../composables/useWindows'
 import { currentWorkspace, wsSend } from '../../composables/useWs'
+import FileUploader from './FileUploader.vue'
 
 onMounted(() => initFileState())
 onUnmounted(() => { if (s.value) s.value.contextMenu = null })
+
+const showUploader = ref(false)
 
 // ── Navigation ────────────────────────────────────────────────────────────────
 const goUp = () => {
@@ -210,6 +213,14 @@ const previewEntry = computed(() => {
       <div class="flex gap-1">
         <button @click.stop="s.viewMode = 'grid'" :style="s.viewMode==='grid'?'color:white;background:rgba(255,255,255,0.12)':'color:rgba(255,255,255,0.3)'" class="px-2 py-1 rounded text-[12px] transition-[background] duration-100">⊞</button>
         <button @click.stop="s.viewMode = 'list'" :style="s.viewMode==='list'?'color:white;background:rgba(255,255,255,0.12)':'color:rgba(255,255,255,0.3)'" class="px-2 py-1 rounded text-[12px] transition-[background] duration-100">☰</button>
+        <!-- Upload button -->
+        <button
+          @click.stop="showUploader = true"
+          title="Upload files"
+          class="px-2 py-1 rounded text-[12px] transition-all duration-100 flex items-center gap-1"
+          style="color:rgba(255,255,255,0.55);border:1px solid rgba(255,255,255,0.1)"
+          :style="showUploader ? 'color:white;background:rgba(96,165,250,0.18);border-color:rgba(96,165,250,0.4)' : ''"
+        >⬆ Upload</button>
       </div>
     </div>
 
@@ -325,7 +336,7 @@ const previewEntry = computed(() => {
     <!-- Context Menu -->
     <Teleport to="body">
       <div v-if="s.contextMenu" ref="ctxEl"
-        class="fixed z-[99999] py-1 rounded-xl shadow-2xl overflow-hidden"
+        class="fixed z-99999 py-1 rounded-xl shadow-2xl overflow-hidden"
         style="min-width:200px;background:rgba(30,30,35,0.92);border:1px solid rgba(255,255,255,0.08);backdrop-filter:blur(24px) saturate(140%)"
         :style="{ left: s.contextMenu.x + 'px', top: s.contextMenu.y + 'px' }"
         @click.stop>
@@ -360,6 +371,23 @@ const previewEntry = computed(() => {
         </template>
       </div>
     </Teleport>
+
+    <!-- ── File Uploader Modal ───────────────────────────────────────── -->
+    <Teleport to="body">
+      <Transition name="up-fade">
+        <div
+          v-if="showUploader"
+          class="upload-overlay"
+          @click.self="showUploader = false"
+        >
+          <FileUploader
+            :dest-dir="s.path"
+            @done="loadFiles(s.path)"
+            @close="showUploader = false"
+          />
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -382,4 +410,18 @@ const previewEntry = computed(() => {
 .ctx-danger { color: #f87171; }
 .ctx-danger:hover { background: rgba(248,113,113,0.15); color: #fca5a5; }
 .ctx-divider { height: 1px; background: rgba(255,255,255,0.06); margin: 4px 0; }
+
+/* ── Upload overlay ─────────────────────────────────────────────────────────── */
+.upload-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99998;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.45);
+  backdrop-filter: blur(4px);
+}
+.up-fade-enter-active, .up-fade-leave-active { transition: opacity 180ms ease, transform 180ms ease; }
+.up-fade-enter-from, .up-fade-leave-to { opacity: 0; transform: scale(0.96); }
 </style>

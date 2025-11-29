@@ -1,7 +1,6 @@
-use axum::{extract::Query, http::StatusCode, response::IntoResponse, Json};
+use axum::{Json, extract::Query, http::StatusCode, response::IntoResponse};
 use serde::{Deserialize, Serialize};
 use std::process::Command;
-use tracing::warn;
 
 #[derive(Deserialize)]
 pub struct SearchQuery {
@@ -25,17 +24,17 @@ pub async fn search_files(Query(q): Query<SearchQuery>) -> impl IntoResponse {
     let home = std::env::var("HOME").unwrap_or("/home".into());
     let mut cmd = Command::new("rg");
     cmd.arg("--files")
-       .arg("--max-depth")
-       .arg("6")
-       .arg("--iglob")
-       .arg(format!("*{}*", query));
+        .arg("--max-depth")
+        .arg("6")
+        .arg("--iglob")
+        .arg(format!("*{}*", query));
 
     if let Some(glob_pat) = q.glob {
         if !glob_pat.trim().is_empty() && glob_pat != "*" {
             cmd.arg("-g").arg(&glob_pat);
         }
     }
-    
+
     cmd.arg(&home).stderr(std::process::Stdio::null());
 
     let results = match cmd.output() {
