@@ -91,8 +91,8 @@ export function spawnWindow(app: string, extra: Partial<AppWindow> = {}): string
   const id = Math.random().toString(36).substring(7)
 
   // Default logical sizes
-  const logW = app === 'messages' ? 440 : app === 'canvas' ? 640 : 700
-  const logH = app === 'messages' ? 520 : 460
+  const logW = app === 'messages' ? 440 : app === 'canvas' ? 640 : app === 'editor' ? 960 : app === 'taskmanager' ? 800 : 700
+  const logH = app === 'messages' ? 520 : app === 'editor' ? 580 : app === 'taskmanager' ? 540 : 460
 
   // Stagger in logical space
   const offsetX = Math.round((80 + (count * 28) % 200) * LOGICAL_W / window.innerWidth)

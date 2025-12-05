@@ -163,3 +163,28 @@ pub async fn read_file_text(Query(q): Query<PathQuery>) -> impl IntoResponse {
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
     }
 }
+
+#[derive(Deserialize)]
+pub struct WriteReq {
+    pub path: String,
+    pub content: String,
+}
+
+pub async fn write_file(Json(body): Json<WriteReq>) -> impl IntoResponse {
+    let p = match safe_path(&body.path) {
+        Some(p) => p,
+        None => return (StatusCode::BAD_REQUEST, "invalid path").into_response(),
+    };
+
+    // Ensure parent directory exists
+    if let Some(parent) = p.parent() {
+        if let Err(e) = fs::create_dir_all(parent).await {
+            return (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response();
+        }
+    }
+
+    match fs::write(&p, &body.content).await {
+        Ok(_) => (StatusCode::OK, "ok").into_response(),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+    }
+}

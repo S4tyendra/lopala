@@ -12,6 +12,8 @@ import MessagesApp from './components/apps/MessagesApp.vue'
 import CanvasApp from './components/apps/CanvasApp.vue'
 import ScreenshotApp from './components/apps/ScreenshotApp.vue'
 import ScreenViewApp from './components/apps/ScreenViewApp.vue'
+import TaskmanagerApp from './components/apps/TaskmanagerApp.vue'
+import CodeEditorApp from './components/apps/CodeEditorApp.vue'
 import Notifications from './components/Notifications.vue'
 import SpotlightSearch from './components/SpotlightSearch.vue'
 
@@ -35,6 +37,7 @@ const activeApp = ref('Finder')
 const APP_NAMES: Record<string, string> = {
   terminal: 'Terminal', files: 'Finder', messages: 'Messages',
   canvas: 'Canvas', screenshot: 'Screenshot', screenview: 'Screen View',
+  taskmanager: 'Task Manager', editor: 'Code Editor',
 }
 
 // ─── WS Event Handler ─────────────────────────────────────────────────────────
@@ -245,6 +248,8 @@ onUnmounted(() => {
           :win-h="win.h" />
         <ScreenshotApp v-else-if="win.app === 'screenshot'" :win-id="win.id" />
         <ScreenViewApp v-else-if="win.app === 'screenview'" :win-id="win.id" />
+        <TaskmanagerApp v-else-if="win.app === 'taskmanager'" :win-id="win.id" />
+        <CodeEditorApp v-else-if="win.app === 'editor'" :win-id="win.id" />
       </WindowFrame>
     </div>
 

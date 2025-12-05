@@ -1,54 +1,35 @@
-use std::process::Command;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::process::Stdio;
+use base64::{Engine as _, engine::general_purpose::STANDARD as B64};
 use tracing::{error, info};
 use crate::state::{GlobalState, WsEvent};
 
-fn now_ms() -> u128 {
-    SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis()
-}
-
 /// Spawn a grim capture loop for the given display.
-/// Frames are written to /tmp/lopala/live/{display}/ and frames older than
-/// 10 seconds are pruned on every iteration.
+/// Captures directly to stdout (no disk I/O), base64-encodes the JPEG buffer,
+/// and broadcasts via WebSocket. Zero temp files.
 pub fn spawn_stream(disp: String, state: GlobalState) -> tokio::task::JoinHandle<()> {
     tokio::spawn(async move {
-        let dir = format!("/tmp/lopala/live/{}", disp);
-        std::fs::create_dir_all(&dir).unwrap_or_default();
-        info!("Screen stream started: {}", disp);
-
-        // Track written paths for time-based pruning
-        let mut frame_ring: std::collections::VecDeque<(u128, String)> = std::collections::VecDeque::new();
+        info!("Screen stream started (in-memory): {}", disp);
 
         loop {
-            let ts = now_ms();
-            let path = format!("{}/{}.jpg", dir, ts);
-
-            let result = Command::new("grim")
+            let result = tokio::process::Command::new("grim")
                 .arg("-o").arg(&disp)
                 .arg("-t").arg("jpeg")
-                .arg("-q").arg("72")
-                .arg("-s").arg("0.6")
-                .arg(&path)
-                .output();
+                .arg("-q").arg("65")
+                .arg("-s").arg("0.5")
+                .arg("-")  // pipe to stdout — no disk write
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .output()
+                .await;
 
             match result {
                 Ok(out) if out.status.success() => {
+                    // Encode JPEG bytes to base64 and broadcast immediately
+                    let b64 = B64.encode(&out.stdout);
                     let _ = state.tx.send(WsEvent::ScreenFrame {
                         display: disp.clone(),
-                        path: path.clone(),
+                        data: b64,
                     });
-                    frame_ring.push_back((ts, path));
-
-                    // Prune frames older than 10 seconds
-                    let cutoff = now_ms().saturating_sub(10_000);
-                    while let Some((frame_ts, _)) = frame_ring.front() {
-                        if *frame_ts < cutoff {
-                            let (_, old_path) = frame_ring.pop_front().unwrap();
-                            let _ = std::fs::remove_file(&old_path);
-                        } else {
-                            break;
-                        }
-                    }
                 }
                 Ok(out) => {
                     let err = String::from_utf8_lossy(&out.stderr).to_string();
@@ -63,8 +44,6 @@ pub fn spawn_stream(disp: String, state: GlobalState) -> tokio::task::JoinHandle
             tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
         }
 
-        // Cleanup this display's dir when stream ends
-        let _ = std::fs::remove_dir_all(&dir);
         info!("Screen stream stopped: {}", disp);
     })
 }

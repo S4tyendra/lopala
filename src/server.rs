@@ -1,13 +1,18 @@
 use axum::{
-    Router, extract::{DefaultBodyLimit, FromRef}, http::{HeaderValue, StatusCode, header}, response::IntoResponse, routing::{get, post}
+    routing::{get, post},
+    Router,
+    http::{StatusCode, HeaderValue, header},
+    response::{IntoResponse},
+    extract::FromRef,
 };
 use crate::embed::Assets;
 use crate::ws::ws_handler;
 use crate::state::GlobalState;
-use crate::files::{list_files, move_file, copy_file, rename_file, delete_file, download_file, read_file_text};
+use crate::files::{list_files, move_file, copy_file, rename_file, delete_file, download_file, read_file_text, write_file};
 use crate::screenshot::{get_displays, take_screenshot};
 use crate::search::search_files;
 use crate::upload::{upload_init, upload_chunk, upload_status, UploadSessions};
+use crate::system::{list_processes, kill_process};
 use tower_http::cors::CorsLayer;
 use tracing::info;
 
@@ -40,10 +45,14 @@ pub async fn start_server(port: u16, state: GlobalState, upload_sessions: Upload
         .route("/files/delete", post(delete_file))
         .route("/files/download", get(download_file))
         .route("/files/read", get(read_file_text))
+        .route("/files/write", post(write_file))
         // ── Chunked Upload API ────────────────────────────────────────────────
         .route("/files/upload/init", post(upload_init))
         .route("/files/upload/chunk", post(upload_chunk))
         .route("/files/upload/status", get(upload_status))
+        // ── System / Task Manager ─────────────────────────────────────────────
+        .route("/system/ps", get(list_processes))
+        .route("/system/kill", post(kill_process))
         // ── Misc ──────────────────────────────────────────────────────────────
         .route("/displays", get(get_displays))
         .route("/screenshots/take", post(take_screenshot))
@@ -54,9 +63,7 @@ pub async fn start_server(port: u16, state: GlobalState, upload_sessions: Upload
         .nest("/api", api)
         .fallback(static_asset_handler)
         .layer(CorsLayer::permissive())
-        .layer(DefaultBodyLimit::max(50 * 1024 * 1024))
         .with_state(shared);
-
 
     let listener = tokio::net::TcpListener::bind(&format!("0.0.0.0:{}", port)).await?;
     info!("HTTP Server listening on: {}", port);
@@ -67,13 +74,7 @@ pub async fn start_server(port: u16, state: GlobalState, upload_sessions: Upload
 /// Fallback for Axum to serve embedded assets from `ui/dist`
 async fn static_asset_handler(uri: axum::http::Uri) -> impl IntoResponse {
     let path = uri.path().trim_start_matches('/');
-
-    if path.starts_with("api/") {
-        return (StatusCode::NOT_FOUND, "API Route Not Found").into_response();
-    }
-
     let file_path = if path.is_empty() { "index.html" } else { path };
-
 
     match Assets::get(file_path) {
         Some(content) => {

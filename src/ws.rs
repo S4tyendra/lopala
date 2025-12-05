@@ -190,7 +190,6 @@ async fn handle_client_event(event: WsEvent, state: GlobalState, direct_tx: mpsc
             let _ = state.tx.send(WsEvent::SetWorkspaceCount { count });
         }
 
-
         WsEvent::RequestHistory { id } => {
             // Send ONLY to the requesting client — never broadcast.
             // Prepend VT100 clear so the history replays cleanly.
@@ -229,6 +228,25 @@ async fn handle_client_event(event: WsEvent, state: GlobalState, direct_tx: mpsc
                     }
                 }
             }
+        }
+        // ── Editor collaboration ─────────────────────────────────────────────
+        WsEvent::EditorOp { op } => {
+            // Track version per file for conflict detection
+            {
+                let mut versions = state.editor_versions.lock().await;
+                let v = versions.entry(op.file_path.clone()).or_insert(0);
+                if op.version > *v {
+                    *v = op.version;
+                }
+            }
+            let _ = state.tx.send(WsEvent::EditorOp { op });
+        }
+        WsEvent::EditorCursor { cursor } => {
+            let _ = state.tx.send(WsEvent::EditorCursor { cursor });
+        }
+        // ── Taskmanager sync ─────────────────────────────────────────────────
+        WsEvent::TaskmanagerSync { state: tm_state } => {
+            let _ = state.tx.send(WsEvent::TaskmanagerSync { state: tm_state });
         }
         _ => {}
     }

@@ -88,6 +88,78 @@ pub struct ScreenshotStateSync {
     pub sender: String,
 }
 
+// ─── System Vitals ────────────────────────────────────────────────────────────
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct SystemVitals {
+    pub cpu_percent: f64,
+    pub ram_used_mb: u64,
+    pub ram_total_mb: u64,
+    pub swap_used_mb: u64,
+    pub swap_total_mb: u64,
+    pub disk_read_bytes: u64,
+    pub disk_write_bytes: u64,
+    /// Per-core usage percentages
+    pub cpu_per_core: Vec<f64>,
+}
+
+#[allow(dead_code)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct ProcessInfo {
+    pub pid: u32,
+    pub name: String,
+    pub cpu: f64,
+    pub mem_mb: u64,
+    pub user: String,
+    pub command: String,
+}
+
+// ─── Editor Sync (CRDT/OT-style) ─────────────────────────────────────────────
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct EditorOp {
+    /// The file being edited
+    pub file_path: String,
+    /// Who is making the edit
+    pub user_id: String,
+    /// Operation type: "insert", "delete", "replace", "cursor", "selection"
+    pub op: String,
+    /// Position in the document (character offset)
+    pub pos: usize,
+    /// For delete/replace: number of characters to remove
+    pub del_len: usize,
+    /// For insert/replace: text to insert
+    pub text: String,
+    /// Monotonically increasing version per file — used for conflict resolution
+    pub version: u64,
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct EditorCursor {
+    pub file_path: String,
+    pub user_id: String,
+    pub user_name: String,
+    pub user_color: String,
+    /// Primary cursor position (char offset)
+    pub pos: usize,
+    /// Selection anchor (char offset), same as pos if no selection
+    pub anchor: usize,
+}
+
+// ─── Taskmanager Sync ─────────────────────────────────────────────────────────
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct TaskmanagerStateSync {
+    /// "sort_col", "sort_dir", "filter", etc.
+    pub sort_column: String,
+    pub sort_ascending: bool,
+    pub filter: String,
+    pub version: u64,
+    pub sender: String,
+}
+
+// ─── App State ────────────────────────────────────────────────────────────────
+
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct AppStateData {
     pub users: HashMap<String, User>,
@@ -112,6 +184,8 @@ pub struct GlobalState {
     pub ptys: Arc<Mutex<HashMap<String, PtyHandle>>>,
     // display -> (watcher_count, abort_handle)
     pub stream_tasks: Arc<Mutex<HashMap<String, (u32, AbortHandle)>>>,
+    // Per-file editor document versions (file_path -> latest version)
+    pub editor_versions: Arc<Mutex<HashMap<String, u64>>>,
 }
 
 impl GlobalState {
@@ -133,6 +207,7 @@ impl GlobalState {
             pty_history: Arc::new(Mutex::new(HashMap::new())),
             ptys: Arc::new(Mutex::new(HashMap::new())),
             stream_tasks: Arc::new(Mutex::new(HashMap::new())),
+            editor_versions: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 }
@@ -164,8 +239,15 @@ pub enum WsEvent {
     ChannelCreated { channel: Channel },
     FileSync { state: FileStateSync },
     ScreenshotSync { state: ScreenshotStateSync },
-    // Screen view streaming
+    // Screen view streaming — binary frame as base64
     StartStream { display: String },
     StopStream { display: String },
-    ScreenFrame { display: String, path: String },
+    ScreenFrame { display: String, data: String },
+    // System vitals (broadcast every 2s)
+    SystemVitals { vitals: SystemVitals },
+    // Editor collaboration
+    EditorOp { op: EditorOp },
+    EditorCursor { cursor: EditorCursor },
+    // Taskmanager sync
+    TaskmanagerSync { state: TaskmanagerStateSync },
 }

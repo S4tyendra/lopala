@@ -181,10 +181,16 @@ const handleMsg = (e: MessageEvent) => {
     const msg = JSON.parse(e.data)
     if (msg.type !== 'ScreenFrame' || msg.display !== selectedDisplay.value || !isLive.value) return
 
-    const url = `/api/files/download?path=${encodeURIComponent(msg.path)}`
+    // Server sends base64-encoded JPEG directly — create a blob URL
+    const binary = atob(msg.data)
+    const bytes = new Uint8Array(binary.length)
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+    const blob = new Blob([bytes], { type: 'image/jpeg' })
+    const url = URL.createObjectURL(blob)
 
-    // Start preload immediately — fire & forget
+    // Preload as texture — fire & forget
     preloadTex(url).then(tex => {
+      URL.revokeObjectURL(url) // free blob memory
       if (!isLive.value) { tex.dispose(); return }
 
       // Bootstrap first frame: tA = tB = first tex, no morph needed
@@ -202,7 +208,7 @@ const handleMsg = (e: MessageEvent) => {
       }
       texQueue.push(tex)
       pumpQueue()
-    }).catch(() => {})
+    }).catch(() => { URL.revokeObjectURL(url) })
   } catch {}
 }
 
