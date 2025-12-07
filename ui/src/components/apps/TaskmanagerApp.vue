@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { wsSend, ws } from '../../composables/useWs'
+import { ws } from '../../composables/useWs'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface ProcessInfo {
@@ -30,11 +30,8 @@ const prevDiskRead = ref(0)
 const prevDiskWrite = ref(0)
 const diskReadRate = ref(0)
 const diskWriteRate = ref(0)
-const cpuHistory = ref<number[]>([])
-const ramHistory = ref<number[]>([])
-const MAX_HISTORY = 60
 
-const sortCol = ref<'cpu' | 'mem_mb' | 'pid' | 'name'>('cpu')
+const sortCol = ref<'cpu' | 'mem_mb' | 'pid' | 'name' | 'user'>('cpu')
 const sortAsc = ref(false)
 const filter = ref('')
 const loading = ref(false)
@@ -45,7 +42,7 @@ const filteredProcs = computed(() => {
   let list = [...procs.value]
   if (filter.value) {
     const q = filter.value.toLowerCase()
-    list = list.filter(p => p.name.toLowerCase().includes(q) || p.command.toLowerCase().includes(q) || String(p.pid).includes(q))
+    list = list.filter(p => p.name.toLowerCase().includes(q) || p.command.toLowerCase().includes(q) || String(p.pid).includes(q) || p.user.toLowerCase().includes(q))
   }
   list.sort((a, b) => {
     const av = a[sortCol.value], bv = b[sortCol.value]
@@ -53,11 +50,6 @@ const filteredProcs = computed(() => {
     return sortAsc.value ? cmp : -cmp
   })
   return list
-})
-
-const ramPercent = computed(() => {
-  if (!vitals.value) return 0
-  return Math.round((vitals.value.ram_used_mb / vitals.value.ram_total_mb) * 100)
 })
 
 // ─── Fetch processes ──────────────────────────────────────────────────────────
@@ -93,12 +85,6 @@ function onWsMsg(e: MessageEvent) {
       const v = msg.vitals as Vitals
       vitals.value = v
 
-      // CPU/RAM history for sparklines
-      cpuHistory.value.push(v.cpu_percent)
-      if (cpuHistory.value.length > MAX_HISTORY) cpuHistory.value.shift()
-      ramHistory.value.push(ramPercent.value)
-      if (ramHistory.value.length > MAX_HISTORY) ramHistory.value.shift()
-
       // Disk rate calculation
       if (prevDiskRead.value > 0) {
         diskReadRate.value = Math.max(0, (v.disk_read_bytes - prevDiskRead.value) / 2) // per sec (2s interval)
@@ -111,20 +97,9 @@ function onWsMsg(e: MessageEvent) {
 }
 
 function fmtBytes(b: number): string {
-  if (b < 1024) return `${b} B/s`
-  if (b < 1024 ** 2) return `${(b / 1024).toFixed(1)} KB/s`
-  return `${(b / (1024 ** 2)).toFixed(1)} MB/s`
-}
-
-function sparklinePath(data: number[], w: number, h: number): string {
-  if (data.length < 2) return ''
-  const max = Math.max(...data, 1)
-  const step = w / (MAX_HISTORY - 1)
-  return data.map((v, i) => {
-    const x = i * step
-    const y = h - (v / max) * h
-    return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`
-  }).join(' ')
+  if (b < 1024) return `${b} B`
+  if (b < 1024 ** 2) return `${(b / 1024).toFixed(1)} KB`
+  return `${(b / (1024 ** 2)).toFixed(1)} MB`
 }
 
 function setSort(col: typeof sortCol.value) {
@@ -134,7 +109,7 @@ function setSort(col: typeof sortCol.value) {
 
 onMounted(() => {
   fetchProcs()
-  pollTimer = setInterval(fetchProcs, 5000) // refresh process list every 5s
+  pollTimer = setInterval(fetchProcs, 3000) // refresh process list every 3s
   ws.value?.addEventListener('message', onWsMsg)
 })
 
@@ -143,7 +118,6 @@ onUnmounted(() => {
   ws.value?.removeEventListener('message', onWsMsg)
 })
 
-// Re-attach WS listener when socket reconnects
 watch(ws, (newWs, oldWs) => {
   oldWs?.removeEventListener('message', onWsMsg)
   newWs?.addEventListener('message', onWsMsg)
@@ -152,86 +126,42 @@ watch(ws, (newWs, oldWs) => {
 
 <template>
   <div class="tm-root">
-    <!-- ── Vitals Dashboard ─────────────────────────────────────────── -->
-    <div class="vitals-row">
-      <!-- CPU Gauge -->
-      <div class="gauge-card">
-        <div class="gauge-header">
-          <span class="gauge-label">CPU</span>
-          <span class="gauge-value cpu">{{ vitals ? vitals.cpu_percent.toFixed(1) : '—' }}%</span>
-        </div>
-        <svg class="sparkline" viewBox="0 0 200 40" preserveAspectRatio="none">
-          <path :d="sparklinePath(cpuHistory, 200, 40)" fill="none" stroke="url(#cpuGrad)" stroke-width="1.5" />
-          <defs><linearGradient id="cpuGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#60a5fa"/><stop offset="1" stop-color="#a78bfa"/></linearGradient></defs>
-        </svg>
-        <div v-if="vitals" class="core-dots">
-          <div v-for="(c, i) in vitals.cpu_per_core" :key="i" class="core-dot"
-            :style="{ background: `hsl(${220 - c * 1.2}, 80%, ${65 - c * 0.3}%)`, opacity: 0.4 + c / 166 }"
-            :title="`Core ${i}: ${c.toFixed(0)}%`" />
-        </div>
+    
+    <!-- ── Header Toolbar ────────────────────────────────────────────── -->
+    <div class="toolbar">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input v-model="filter" placeholder="Search processes…" class="filter-input" spellcheck="false" />
       </div>
-
-      <!-- RAM Gauge -->
-      <div class="gauge-card">
-        <div class="gauge-header">
-          <span class="gauge-label">Memory</span>
-          <span class="gauge-value ram">{{ vitals ? `${vitals.ram_used_mb}` : '—' }} / {{ vitals ? vitals.ram_total_mb : '—' }} MB</span>
-        </div>
-        <svg class="sparkline" viewBox="0 0 200 40" preserveAspectRatio="none">
-          <path :d="sparklinePath(ramHistory, 200, 40)" fill="none" stroke="url(#ramGrad)" stroke-width="1.5" />
-          <defs><linearGradient id="ramGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#34d399"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs>
-        </svg>
-        <div class="ram-bar-track">
-          <div class="ram-bar-fill" :style="{ width: ramPercent + '%' }" />
-        </div>
-      </div>
-
-      <!-- Swap -->
-      <div class="gauge-card mini">
-        <div class="gauge-header">
-          <span class="gauge-label">Swap</span>
-          <span class="gauge-value swap">{{ vitals ? `${vitals.swap_used_mb} / ${vitals.swap_total_mb} MB` : '—' }}</span>
-        </div>
-      </div>
-
-      <!-- Disk I/O -->
-      <div class="gauge-card mini">
-        <div class="gauge-header">
-          <span class="gauge-label">Disk I/O</span>
-          <span class="gauge-value disk">↑{{ fmtBytes(diskWriteRate) }} ↓{{ fmtBytes(diskReadRate) }}</span>
-        </div>
-      </div>
+      <div style="flex:1"></div>
+      <button @click="fetchProcs" class="btn-icon" :class="{ spin: loading }" title="Refresh">⟳</button>
     </div>
 
     <!-- ── Process Table ────────────────────────────────────────────── -->
-    <div class="toolbar">
-      <input v-model="filter" placeholder="Filter processes…" class="filter-input" />
-      <button @click="fetchProcs" class="refresh-btn" :class="{ spin: loading }">⟳</button>
-      <span class="proc-count">{{ filteredProcs.length }} processes</span>
-    </div>
-
     <div class="table-wrap">
       <table>
         <thead>
           <tr>
-            <th @click="setSort('pid')" class="sortable" :class="{ active: sortCol === 'pid' }">PID {{ sortCol === 'pid' ? (sortAsc ? '↑' : '↓') : '' }}</th>
-            <th @click="setSort('name')" class="sortable" :class="{ active: sortCol === 'name' }">Name {{ sortCol === 'name' ? (sortAsc ? '↑' : '↓') : '' }}</th>
-            <th @click="setSort('cpu')" class="sortable" :class="{ active: sortCol === 'cpu' }">CPU % {{ sortCol === 'cpu' ? (sortAsc ? '↑' : '↓') : '' }}</th>
-            <th @click="setSort('mem_mb')" class="sortable" :class="{ active: sortCol === 'mem_mb' }">Mem MB {{ sortCol === 'mem_mb' ? (sortAsc ? '↑' : '↓') : '' }}</th>
-            <th>Action</th>
+            <th @click="setSort('name')" class="sortable col-name" :class="{ active: sortCol === 'name' }">Process Name <span>{{ sortCol === 'name' ? (sortAsc ? '↑' : '↓') : '' }}</span></th>
+            <th @click="setSort('cpu')" class="sortable text-right" :class="{ active: sortCol === 'cpu' }">% CPU <span>{{ sortCol === 'cpu' ? (sortAsc ? '↑' : '↓') : '' }}</span></th>
+            <th @click="setSort('mem_mb')" class="sortable text-right" :class="{ active: sortCol === 'mem_mb' }">Memory <span>{{ sortCol === 'mem_mb' ? (sortAsc ? '↑' : '↓') : '' }}</span></th>
+            <th @click="setSort('user')" class="sortable" :class="{ active: sortCol === 'user' }">User <span>{{ sortCol === 'user' ? (sortAsc ? '↑' : '↓') : '' }}</span></th>
+            <th @click="setSort('pid')" class="sortable" :class="{ active: sortCol === 'pid' }">PID <span>{{ sortCol === 'pid' ? (sortAsc ? '↑' : '↓') : '' }}</span></th>
+            <th class="col-cmd">Action</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="p in filteredProcs" :key="p.pid" :class="{ hot: p.cpu > 50 }">
-            <td class="pid-cell">{{ p.pid }}</td>
-            <td class="name-cell" :title="p.command">{{ p.name }}</td>
-            <td class="cpu-cell">
-              <div class="cpu-bar-bg"><div class="cpu-bar-fg" :style="{ width: Math.min(p.cpu, 100) + '%' }" /></div>
-              <span>{{ p.cpu.toFixed(1) }}</span>
+          <tr v-for="p in filteredProcs" :key="p.pid" :class="{ 'high-cpu': p.cpu > 20 }">
+            <td class="col-name" :title="p.command">
+              <span class="proc-icon">⚙️</span>
+              <span class="proc-name">{{ p.name }}</span>
             </td>
-            <td class="mem-cell">{{ p.mem_mb }}</td>
-            <td>
-              <button @click.stop="killProc(p.pid)" class="kill-btn" :disabled="killing === p.pid">
+            <td class="text-right num-font" :class="{ 'warn': p.cpu > 10, 'crit': p.cpu > 50 }">{{ p.cpu.toFixed(1) }}</td>
+            <td class="text-right num-font">{{ p.mem_mb }} MB</td>
+            <td class="num-font opacity-70">{{ p.user }}</td>
+            <td class="num-font opacity-50">{{ p.pid }}</td>
+            <td class="col-cmd">
+              <button @click.stop="killProc(p.pid)" class="kill-btn" :disabled="killing === p.pid" title="Force Quit">
                 {{ killing === p.pid ? '…' : '✕' }}
               </button>
             </td>
@@ -239,109 +169,149 @@ watch(ws, (newWs, oldWs) => {
         </tbody>
       </table>
     </div>
+
+    <!-- ── Footer Vitals (Mac style bottom bar) ─────────────────────── -->
+    <div class="footer-bar mt-auto">
+      <div class="stat-group">
+        <label>System CPU</label>
+        <span class="val text-blue">{{ vitals ? vitals.cpu_percent.toFixed(1) : '—' }}%</span>
+      </div>
+      <div class="divider" />
+      <div class="stat-group">
+        <label>Memory Used</label>
+        <span class="val text-green">{{ vitals ? vitals.ram_used_mb : '—' }} <small>MB</small></span>
+      </div>
+      <div class="stat-group">
+        <label>Memory Total</label>
+        <span class="val">{{ vitals ? vitals.ram_total_mb : '—' }} <small>MB</small></span>
+      </div>
+      <div class="divider" />
+      <div class="stat-group">
+        <label>Disk Read</label>
+        <span class="val">{{ fmtBytes(diskReadRate) }}/s</span>
+      </div>
+      <div class="stat-group">
+        <label>Disk Write</label>
+        <span class="val">{{ fmtBytes(diskWriteRate) }}/s</span>
+      </div>
+      <div class="flex-1" />
+      <div class="stat-group right">
+        <label>Processes</label>
+        <span class="val">{{ procs.length }}</span>
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
 .tm-root {
   display: flex; flex-direction: column; height: 100%;
-  background: rgba(12,12,16,0.95); color: #c8c8d0;
-  font-family: 'JetBrains Mono', 'IBM Plex Mono', monospace;
-  font-size: 12px; overflow: hidden;
+  background: #1e1e24; color: #ececec;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+  overflow: hidden; font-size: 13px;
 }
-
-/* ── Vitals ───────────────────────────────────────────────────────── */
-.vitals-row {
-  display: flex; gap: 8px; padding: 10px 12px 6px;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-  background: rgba(0,0,0,0.2); flex-shrink: 0;
-}
-.gauge-card {
-  flex: 1; padding: 8px 10px;
-  border-radius: 10px; background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.06);
-  display: flex; flex-direction: column; gap: 4px; min-width: 0;
-}
-.gauge-card.mini { flex: 0.6; }
-.gauge-header { display: flex; justify-content: space-between; align-items: center; }
-.gauge-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: rgba(255,255,255,0.35); font-weight: 600; }
-.gauge-value { font-size: 11px; font-weight: 600; }
-.gauge-value.cpu { color: #a78bfa; }
-.gauge-value.ram { color: #34d399; }
-.gauge-value.swap { color: #fb923c; }
-.gauge-value.disk { color: #60a5fa; }
-
-.sparkline { width: 100%; height: 28px; }
-
-.core-dots { display: flex; gap: 2px; flex-wrap: wrap; }
-.core-dot { width: 6px; height: 6px; border-radius: 50%; transition: all 300ms; }
-
-.ram-bar-track { height: 3px; border-radius: 99px; background: rgba(255,255,255,0.07); overflow: hidden; }
-.ram-bar-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, #34d399, #22d3ee); transition: width 500ms ease; }
 
 /* ── Toolbar ──────────────────────────────────────────────────────── */
 .toolbar {
   display: flex; align-items: center; gap: 8px;
-  padding: 6px 12px; flex-shrink: 0;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+  padding: 10px 16px; flex-shrink: 0;
+  background: #2a2a32;
+  border-bottom: 1px solid rgba(0,0,0,0.5);
+  box-shadow: inset 0 -1px 0 rgba(255,255,255,0.05);
+}
+.search-wrap {
+  position: relative; width: 260px; display: flex; align-items: center;
+}
+.search-icon {
+  position: absolute; left: 10px; font-size: 12px; opacity: 0.5; pointer-events: none;
 }
 .filter-input {
-  flex: 1; padding: 5px 10px; border-radius: 8px;
-  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
-  color: white; font-size: 11px; outline: none; font-family: inherit;
-  transition: border-color 150ms;
+  width: 100%; padding: 6px 10px 6px 30px; border-radius: 6px;
+  background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1);
+  color: white; font-size: 13px; outline: none; font-family: inherit;
+  transition: all 150ms; box-shadow: inset 0 1px 2px rgba(0,0,0,0.2);
 }
-.filter-input:focus { border-color: rgba(96,165,250,0.5); }
-.refresh-btn {
-  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08);
-  color: rgba(255,255,255,0.5); width: 28px; height: 28px;
-  border-radius: 8px; cursor: pointer; font-size: 14px;
-  transition: all 150ms; display: flex; align-items: center; justify-content: center;
+.filter-input:focus {
+  background: rgba(0,0,0,0.5); border-color: #60a5fa;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.2), 0 0 0 2px rgba(96,165,250,0.3);
 }
-.refresh-btn:hover { background: rgba(255,255,255,0.1); color: white; }
-.refresh-btn.spin { animation: spin 500ms linear; }
+.btn-icon {
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+  color: white; width: 30px; height: 30px; border-radius: 6px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 16px; transition: 100ms; box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+.btn-icon:hover { background: rgba(255,255,255,0.15); }
+.btn-icon:active { transform: scale(0.96); }
+.btn-icon.spin { animation: spin 500ms linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
-.proc-count { font-size: 10px; color: rgba(255,255,255,0.25); white-space: nowrap; }
 
 /* ── Table ────────────────────────────────────────────────────────── */
-.table-wrap { flex: 1; overflow-y: auto; overflow-x: hidden; }
-table { width: 100%; border-collapse: collapse; }
+.table-wrap { flex: 1; overflow-y: auto; overflow-x: hidden; background: #16161b; }
+table { width: 100%; border-collapse: collapse; text-align: left; }
 thead { position: sticky; top: 0; z-index: 2; }
 th {
-  padding: 6px 10px; text-align: left; font-size: 10px;
-  text-transform: uppercase; letter-spacing: 0.08em;
-  color: rgba(255,255,255,0.3); font-weight: 600;
-  background: rgba(0,0,0,0.4); backdrop-filter: blur(8px);
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-  user-select: none;
+  padding: 6px 12px; font-size: 11px;
+  color: rgba(255,255,255,0.6); font-weight: 500;
+  background: #25252d; border-bottom: 1px solid rgba(0,0,0,0.6);
+  border-right: 1px solid rgba(255,255,255,0.04);
+  box-shadow: inset 0 -1px 0 rgba(255,255,255,0.03);
+  user-select: none; white-space: nowrap;
 }
-th.sortable { cursor: pointer; }
-th.sortable:hover { color: rgba(255,255,255,0.6); }
-th.active { color: #60a5fa; }
+th span { font-size: 9px; margin-left: 2px; opacity: 0.5; }
+th:last-child { border-right: none; }
+th.sortable { cursor: pointer; transition: background 150ms; }
+th.sortable:hover { background: #2a2a32; color: white; }
+th.active { color: white; }
+
 td {
-  padding: 4px 10px; border-bottom: 1px solid rgba(255,255,255,0.03);
+  padding: 5px 12px; border-bottom: 1px solid rgba(255,255,255,0.03);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  max-width: 200px;
+  vertical-align: middle;
 }
-tr:hover { background: rgba(255,255,255,0.03); }
-tr.hot { background: rgba(248,113,113,0.06); }
-.pid-cell { color: rgba(255,255,255,0.3); font-size: 10px; }
-.name-cell { color: rgba(255,255,255,0.85); font-weight: 500; }
+tr:hover { background: rgba(255,255,255,0.05); }
+tr:nth-child(even) { background: rgba(255,255,255,0.015); }
+tr.high-cpu td { background: rgba(96,165,250,0.05); }
 
-.cpu-cell {
-  display: flex; align-items: center; gap: 6px;
-}
-.cpu-bar-bg { width: 50px; height: 3px; border-radius: 99px; background: rgba(255,255,255,0.07); overflow: hidden; flex-shrink: 0; }
-.cpu-bar-fg { height: 100%; border-radius: 99px; background: linear-gradient(90deg, #60a5fa, #f87171); transition: width 300ms; }
-.mem-cell { color: rgba(255,255,255,0.5); }
+.col-name { width: 40%; max-width: 250px; }
+.col-cmd { width: 40px; text-align: center; }
+.text-right { text-align: right; }
 
+.proc-icon { font-size: 14px; margin-right: 8px; filter: grayscale(0.5); opacity: 0.8; }
+.proc-name { font-weight: 500; }
+
+.num-font { font-family: 'JetBrains Mono', 'IBM Plex Mono', monospace; font-size: 12px; }
+.opacity-70 { opacity: 0.7; }
+.opacity-50 { opacity: 0.5; }
+
+.warn { color: #facc15; }
+.crit { color: #f87171; font-weight: 600; }
+
+/* Action Button */
 .kill-btn {
-  width: 22px; height: 22px; border-radius: 6px;
-  background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.2);
-  color: #f87171; cursor: pointer; font-size: 11px;
-  display: flex; align-items: center; justify-content: center;
-  transition: all 120ms;
+  background: transparent; border: none; color: #f87171; cursor: pointer;
+  width: 20px; height: 20px; border-radius: 4px; display: flex; align-items: center; justify-content: center;
+  opacity: 0; font-size: 14px; transition: all 100ms;
 }
-.kill-btn:hover { background: rgba(248,113,113,0.25); color: white; }
-.kill-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+tr:hover .kill-btn { opacity: 0.6; }
+.kill-btn:hover { opacity: 1 !important; background: rgba(248,113,113,0.15); }
+.kill-btn:disabled { opacity: 0.3 !important; cursor: not-allowed; }
+
+/* ── Footer Vitals ────────────────────────────────────────────────── */
+.footer-bar {
+  display: flex; align-items: center; gap: 16px; flex-shrink: 0;
+  padding: 0 16px; height: 44px;
+  background: #2a2a32;
+  border-top: 1px solid rgba(0,0,0,0.5);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+}
+.stat-group { display: flex; flex-direction: column; justify-content: center; gap: 2px; }
+.stat-group.right { text-align: right; }
+.stat-group label { font-size: 10px; text-transform: uppercase; color: rgba(255,255,255,0.4); font-weight: 600; letter-spacing: 0.05em; line-height: 1; }
+.stat-group .val { font-size: 14px; font-weight: 600; line-height: 1; }
+.stat-group small { font-size: 10px; opacity: 0.5; font-weight: normal; }
+
+.divider { width: 1px; height: 24px; background: rgba(255,255,255,0.1); margin: 0 4px; }
+.text-blue { color: #60a5fa; }
+.text-green { color: #34d399; }
 </style>

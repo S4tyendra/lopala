@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick, shallowRef } from 'vue'
-import { ws, wsSend, myId, myName, myColor } from '../../composables/useWs'
+import { ws, wsSend, myId, myName, myColor, windows } from '../../composables/useWs'
 import { EditorState, type ChangeSpec, type Extension } from '@codemirror/state'
 import { EditorView, keymap, ViewUpdate } from '@codemirror/view'
 import { basicSetup } from 'codemirror'
@@ -31,6 +31,7 @@ const treePath = ref(homePath())
 const treeEntries = ref<FileEntry[]>([])
 const treeLoading = ref(false)
 const saving = ref(false)
+const showSidebar = ref(true)
 
 // CodeMirror view (imperative, not reactive)
 let view: EditorView | null = null
@@ -246,7 +247,20 @@ function onWsMsg(e: MessageEvent) {
 }
 
 onMounted(() => {
-  loadTree()
+  const win = windows.value[props.winId]
+  if (win?.args) {
+    if (win.args.type === 'file') {
+      showSidebar.value = false
+      const name = win.args.path.split('/').pop() || ''
+      openFile(win.args.path, name)
+    } else if (win.args.type === 'dir') {
+      showSidebar.value = true
+      loadTree(win.args.path)
+    }
+  } else {
+    loadTree()
+  }
+
   ws.value?.addEventListener('message', onWsMsg)
 })
 onUnmounted(() => {
@@ -262,7 +276,7 @@ watch(ws, (n, o) => {
 <template>
   <div class="editor-root">
     <!-- ── File Tree ──────────────────────────────────────────────── -->
-    <div class="file-tree">
+    <div v-if="showSidebar" class="file-tree">
       <div class="tree-header">
         <button @click="treeGoUp" class="tree-up" title="Go up">←</button>
         <span class="tree-path" :title="treePath">{{ treePath.split('/').pop() || '/' }}</span>
@@ -299,7 +313,7 @@ watch(ws, (n, o) => {
       <div ref="editorEl" class="cm-mount" />
 
       <!-- Empty state -->
-      <div v-if="!tabs.length" class="empty-state">
+      <div v-if="!tabs.length && showSidebar" class="empty-state">
         <span class="empty-icon">✏️</span>
         <span class="empty-label">Open a file from the tree</span>
       </div>

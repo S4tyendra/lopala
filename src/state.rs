@@ -186,6 +186,7 @@ pub struct GlobalState {
     pub stream_tasks: Arc<Mutex<HashMap<String, (u32, AbortHandle)>>>,
     // Per-file editor document versions (file_path -> latest version)
     pub editor_versions: Arc<Mutex<HashMap<String, u64>>>,
+    pub processes: Arc<tokio::sync::RwLock<Vec<ProcessInfo>>>,
 }
 
 impl GlobalState {
@@ -208,6 +209,7 @@ impl GlobalState {
             ptys: Arc::new(Mutex::new(HashMap::new())),
             stream_tasks: Arc::new(Mutex::new(HashMap::new())),
             editor_versions: Arc::new(Mutex::new(HashMap::new())),
+            processes: Arc::new(tokio::sync::RwLock::new(Vec::new())),
         }
     }
 }

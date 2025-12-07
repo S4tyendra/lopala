@@ -18,7 +18,7 @@ import Notifications from './components/Notifications.vue'
 import SpotlightSearch from './components/SpotlightSearch.vue'
 
 import {
-  myId, myName, myColor, showNamePrompt, windows, users, chats,
+  myId, myName, myColor, windows, users, chats,
   channels, currentWorkspace, workspaceCount, wsSend, connectWs, canvasHistory,
 } from './composables/useWs'
 import { visibleWindows, onDragMove, onDragEnd, focusWindow, nextZ, syncZTop, minimizedSlots } from './composables/useWindows'
@@ -135,22 +135,13 @@ const handleEvent = (msg: any) => {
   }
 }
 
-// ─── Join ─────────────────────────────────────────────────────────────────────
-const nameInput = ref('')
-const join = () => {
-  myName.value = nameInput.value.trim() || `user_${myId.value.substring(0, 4)}`
-  showNamePrompt.value = false
-  connectWs(handleEvent, {
-    onOpen: () => notif.wsConnected(),
-    onClose: () => notif.wsDisconnected(),
-  })
-}
+// ─── Desktop initialized via 'app-login' event ────────────────────────────────
 
 // ─── Mouse event handlers (global) ───────────────────────────────────────────
 let lastCursorEmit = 0
 const onGlobalMouseMove = (e: MouseEvent) => {
   const now = Date.now()
-  if (now - lastCursorEmit > 40 && !showNamePrompt.value) {
+  if (now - lastCursorEmit > 40 && myName.value) {
     lastCursorEmit = now
     wsSend({ type: 'CursorMove', id: myId.value, x: e.clientX, y: e.clientY, workspace: currentWorkspace.value })
   }
@@ -197,6 +188,14 @@ onMounted(() => {
   window.addEventListener('mousemove', onGlobalMouseMove)
   window.addEventListener('mouseup', onGlobalMouseUp)
   window.addEventListener('keydown', onKeyDown)
+
+  window.addEventListener('app-login', () => {
+    myName.value = (window as any).lopalaName || `user_${myId.value.substring(0, 4)}`
+    connectWs(handleEvent, {
+      onOpen: () => notif.wsConnected(),
+      onClose: () => notif.wsDisconnected(),
+    })
+  })
 })
 
 onUnmounted(() => {
@@ -208,27 +207,6 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <!-- ── Name Prompt ─────────────────────────────────────────────────────────── -->
-  <div v-if="showNamePrompt" class="fixed inset-0 flex items-center justify-center"
-    style="z-index:2147483646;background:rgba(0,0,0,0.65);backdrop-filter:blur(8px)">
-    <div class="rounded-2xl p-8 w-[360px] shadow-2xl"
-      style="background:rgba(28,28,32,0.96);border:1px solid rgba(255,255,255,0.12);animation:winEnter 250ms cubic-bezier(0.23,1,0.32,1) both">
-      <h2 class="text-white font-semibold text-[18px] mb-1">Welcome to Lopala</h2>
-      <p class="text-[13px] mb-6" style="color:rgba(255,255,255,0.4)">Enter a display name to join the shared workspace.
-      </p>
-      <input v-model="nameInput" @keyup.enter="join" placeholder="Your name" autofocus
-        class="w-full rounded-xl px-4 py-3 text-[14px] text-white outline-none mb-4 transition-[box-shadow] duration-150"
-        style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1)"
-        @focus="(e) => (e.target as HTMLInputElement).style.boxShadow = '0 0 0 2px #0a84ff66'"
-        @blur="(e) => (e.target as HTMLInputElement).style.boxShadow = ''" />
-      <button @click="join"
-        class="w-full py-3 rounded-xl text-white font-semibold text-[14px] transition-[filter] duration-150 hover:brightness-110 active:scale-[0.97]"
-        style="background:#0a84ff">
-        Join Session
-      </button>
-    </div>
-  </div>
-
   <!-- ── Desktop ─────────────────────────────────────────────────────────────── -->
   <div class="fixed inset-0 overflow-hidden select-none" style="background:url('/bg.svg') center/cover">
     <!-- Menu Bar (z: 2147483640) -->

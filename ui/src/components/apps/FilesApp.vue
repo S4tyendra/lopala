@@ -166,6 +166,24 @@ const terminalHere = () => {
   }, 200)
 }
 
+const editorEntry = () => {
+  if (!s.value?.contextMenu?.entry) return
+  const entry = s.value.contextMenu.entry
+  spawnWindow('editor', { 
+    title: 'Code Editor', 
+    args: { type: entry.is_dir ? 'dir' : 'file', path: entry.path } 
+  })
+  closeContextMenu()
+}
+
+const editorHere = () => {
+  spawnWindow('editor', { 
+    title: 'Code Editor', 
+    args: { type: 'dir', path: s.value?.path || '/' } 
+  })
+  closeContextMenu()
+}
+
 // ── View + Path Breadcrumb ────────────────────────────────────────────────────
 const pathParts = computed(() => {
   const parts = s.value.path.split('/').filter(Boolean)
@@ -346,6 +364,9 @@ const previewEntry = computed(() => {
             <span>{{ s.contextMenu.entry.is_dir ? '📂' : '👁️' }}</span>
             {{ s.contextMenu.entry.is_dir ? 'Open' : 'Preview' }}
           </button>
+          <button @click="editorEntry" class="ctx-item">
+            <span>📝</span>Open in Editor
+          </button>
           <div class="ctx-divider"/>
           <button @click="copy" class="ctx-item"><span>📋</span>Copy</button>
           <button @click="cut" class="ctx-item"><span>✂️</span>Cut</button>
@@ -366,6 +387,7 @@ const previewEntry = computed(() => {
         <template v-else>
           <button v-if="s.clipboard" @click="paste" class="ctx-item"><span>📥</span>Paste</button>
           <div class="ctx-divider"/>
+          <button @click="editorHere" class="ctx-item"><span>📝</span>Open Editor in Folder</button>
           <button @click="terminalHere" class="ctx-item"><span>⌨️</span>Open Terminal Here</button>
           <button @click="loadFiles(s.path)" class="ctx-item"><span>🔄</span>Refresh</button>
         </template>

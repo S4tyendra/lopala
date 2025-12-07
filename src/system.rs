@@ -20,7 +20,7 @@ pub fn start_vitals_loop(state: GlobalState) {
         tokio::time::sleep(std::time::Duration::from_secs(1)).await;
 
         loop {
-            sys.refresh_all();
+            sys.refresh_all(); // refreshes CPU, mem, and processes!
 
             let cpu_percent = sys.global_cpu_info().cpu_usage() as f64;
             let cpu_per_core: Vec<f64> = sys.cpus().iter().map(|c| c.cpu_usage() as f64).collect();
@@ -28,6 +28,23 @@ pub fn start_vitals_loop(state: GlobalState) {
             let ram_total_mb = sys.total_memory() / (1024 * 1024);
             let swap_used_mb = sys.used_swap() / (1024 * 1024);
             let swap_total_mb = sys.total_swap() / (1024 * 1024);
+
+            // Fetch Process List inline while System is warm
+            let mut procs: Vec<ProcessInfo> = sys.processes().iter().map(|(pid, proc_)| {
+                ProcessInfo {
+                    pid: pid.as_u32(),
+                    name: proc_.name().to_string(),
+                    cpu: proc_.cpu_usage() as f64,
+                    mem_mb: proc_.memory() / (1024 * 1024),
+                    user: proc_.user_id()
+                        .map(|u| u.to_string())
+                        .unwrap_or_else(|| "-".into()),
+                    command: proc_.cmd().iter().map(|s| s.to_string()).collect::<Vec<_>>().join(" "),
+                }
+            }).collect();
+            // Sort to offload work from UI, default CPU desc
+            procs.sort_by(|a, b| b.cpu.partial_cmp(&a.cpu).unwrap_or(std::cmp::Ordering::Equal));
+            *state.processes.write().await = procs;
 
             // Disk I/O — read from /proc/diskstats
             let mut disk_read: u64 = 0;
@@ -67,27 +84,9 @@ pub fn start_vitals_loop(state: GlobalState) {
 // ─── HTTP handlers ───────────────────────────────────────────────────────────
 
 /// GET /api/system/ps — returns process list
-pub async fn list_processes() -> impl IntoResponse {
-    let mut sys = System::new();
-    sys.refresh_processes();
-
-    let mut procs: Vec<ProcessInfo> = sys.processes().iter().map(|(pid, proc_)| {
-        ProcessInfo {
-            pid: pid.as_u32(),
-            name: proc_.name().to_string(),
-            cpu: proc_.cpu_usage() as f64,
-            mem_mb: proc_.memory() / (1024 * 1024),
-            user: proc_.user_id()
-                .map(|u| u.to_string())
-                .unwrap_or_else(|| "-".into()),
-            command: proc_.cmd().iter().map(|s| s.to_string()).collect::<Vec<_>>().join(" "),
-        }
-    }).collect();
-
-    // Sort by CPU desc by default
-    procs.sort_by(|a, b| b.cpu.partial_cmp(&a.cpu).unwrap_or(std::cmp::Ordering::Equal));
-
-    Json(procs).into_response()
+pub async fn list_processes(axum::extract::State(state): axum::extract::State<GlobalState>) -> impl IntoResponse {
+    let procs = state.processes.read().await;
+    Json(procs.clone()).into_response()
 }
 
 #[derive(Deserialize)]
