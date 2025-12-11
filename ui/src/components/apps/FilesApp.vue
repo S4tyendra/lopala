@@ -5,8 +5,8 @@ import {
   loadFiles, openEntry, renameFile, deleteFiles, copyFiles, moveFiles,
   fileIcon, fileSizeHuman, formatDate,
 } from '../../composables/useFiles'
-import { spawnWindow } from '../../composables/useWindows'
-import { currentWorkspace, wsSend } from '../../composables/useWs'
+import { spawnWindow, focusWindow } from '../../composables/useWindows'
+import { currentWorkspace, wsSend, windows } from '../../composables/useWs'
 import FileUploader from './FileUploader.vue'
 
 onMounted(() => initFileState())
@@ -169,19 +169,41 @@ const terminalHere = () => {
 const editorEntry = () => {
   if (!s.value?.contextMenu?.entry) return
   const entry = s.value.contextMenu.entry
+  closeContextMenu()
+
+  if (!entry.is_dir) {
+    const existing = Object.values(windows.value).find(w => w.app === 'editor' && w.args?.mode === 'file')
+    if (existing) {
+      if (!existing.args.files) existing.args.files = []
+      if (!existing.args.files.includes(entry.path)) existing.args.files.push(entry.path)
+      existing.args.activeFile = entry.path
+      wsSend({ type: 'UpdateWindow', window: existing })
+      focusWindow(existing.id)
+      return
+    }
+  }
+
   spawnWindow('editor', { 
     title: 'Code Editor', 
-    args: { type: entry.is_dir ? 'dir' : 'file', path: entry.path } 
+    args: { 
+      mode: entry.is_dir ? 'dir' : 'file', 
+      dirPath: entry.is_dir ? entry.path : undefined,
+      files: entry.is_dir ? [] : [entry.path],
+      activeFile: entry.is_dir ? undefined : entry.path
+    } 
   })
-  closeContextMenu()
 }
 
 const editorHere = () => {
+  closeContextMenu()
   spawnWindow('editor', { 
     title: 'Code Editor', 
-    args: { type: 'dir', path: s.value?.path || '/' } 
+    args: { 
+      mode: 'dir', 
+      dirPath: s.value?.path || '/', 
+      files: [] 
+    } 
   })
-  closeContextMenu()
 }
 
 // ── View + Path Breadcrumb ────────────────────────────────────────────────────

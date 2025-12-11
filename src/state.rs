@@ -40,6 +40,7 @@ pub struct Window {
     pub maximized: bool,
     pub title: String,
     pub channel: Option<String>,
+    pub args: Option<serde_json::Value>,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]

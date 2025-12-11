@@ -10,7 +10,6 @@ const APPS = [
   { id: 'screenshot', label: 'Screenshot', bg: '#eab308', path: '<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline>' },
   { id: 'screenview', label: 'Screen View', bg: '#0e7490', path: '<rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line><circle cx="12" cy="10" r="3"></circle>' },
   { id: 'taskmanager', label: 'Task Manager', bg: '#dc2626', path: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>' },
-  { id: 'editor', label: 'Code Editor', bg: '#0078d4', path: '<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/><line x1="14" y1="4" x2="10" y2="20"/>' },
 ]
 
 const hasWindow = (app: string) => Object.values(windows.value).some(w => w.app === app)
@@ -22,8 +21,6 @@ const open = (id: string) => {
     spawnWindow('canvas', { title: 'Canvas', canvasId })
   } else if (id === 'terminal') {
     spawnWindow('terminal', { title: 'Terminal' })
-  } else if (id === 'editor') {
-    spawnWindow('editor', { title: 'Code Editor' })
   } else if (id === 'taskmanager') {
     spawnWindow('taskmanager', { title: 'Task Manager' })
   } else {

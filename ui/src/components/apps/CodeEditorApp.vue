@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick, shallowRef } from 'vue'
 import { ws, wsSend, myId, myName, myColor, windows } from '../../composables/useWs'
-import { EditorState, type ChangeSpec, type Extension } from '@codemirror/state'
-import { EditorView, keymap, ViewUpdate } from '@codemirror/view'
+import { EditorState, StateField, StateEffect, type ChangeSpec, type Extension } from '@codemirror/state'
+import { EditorView, keymap, ViewUpdate, Decoration, type DecorationSet, WidgetType } from '@codemirror/view'
 import { basicSetup } from 'codemirror'
 import { oneDark } from '@codemirror/theme-one-dark'
 import { javascript } from '@codemirror/lang-javascript'
@@ -27,7 +27,8 @@ interface EditorTab {
 
 const tabs = ref<EditorTab[]>([])
 const activeTab = ref<string | null>(null)
-const treePath = ref(homePath())
+
+const treePath = ref('/')
 const treeEntries = ref<FileEntry[]>([])
 const treeLoading = ref(false)
 const saving = ref(false)
@@ -41,9 +42,42 @@ let suppressRemote = false // prevents echo-back loops
 // Document versions for conflict resolution
 const docVersions = new Map<string, number>()
 
-function homePath() {
-  return '/'  // will be replaced by $HOME from first API call
+// ─── Remote Cursors Extension ─────────────────────────────────────────────────
+class RemoteCursorWidget extends WidgetType {
+  constructor(public color: string, public name: string) { super() }
+  toDOM() {
+    const el = document.createElement('span')
+    el.className = 'cm-remote-cursor'
+    el.style.borderLeft = `2px solid ${this.color}`
+    const lbl = document.createElement('span')
+    lbl.className = 'cm-remote-cursor-label'
+    lbl.style.background = this.color
+    lbl.textContent = this.name
+    el.appendChild(lbl)
+    return el
+  }
 }
+
+const remoteCursorsMap = new Map<string, { pos: number, name: string, color: string }>()
+const setRemoteCursorsEffect = StateEffect.define<any>()
+
+const remoteCursorField = StateField.define<DecorationSet>({
+  create() { return Decoration.none },
+  update(deco, tr) {
+    deco = deco.map(tr.changes)
+    for (const e of tr.effects) {
+      if (e.is(setRemoteCursorsEffect)) {
+        const arr = (e.value as any[])
+          .filter(c => c.pos <= tr.state.doc.length)
+          .sort((a,b) => a.pos - b.pos)
+          .map(c => Decoration.widget({ widget: new RemoteCursorWidget(c.color, c.name), side: 1 }).range(c.pos))
+        return Decoration.set(arr, true)
+      }
+    }
+    return deco
+  },
+  provide: f => EditorView.decorations.from(f)
+})
 
 // ─── Language detection ───────────────────────────────────────────────────────
 function langForFile(name: string): Extension[] {
@@ -78,11 +112,21 @@ function treeGoUp() {
   loadTree(parent)
 }
 
-async function treeClick(entry: FileEntry) {
+function treeClick(entry: FileEntry) {
   if (entry.is_dir) {
     loadTree(entry.path)
   } else {
-    await openFile(entry.path, entry.name)
+    // Add to args!
+    const win = windows.value[props.winId]
+    if (!win) return
+    if (!win.args) win.args = { mode: 'dir', files: [] }
+    if (!win.args.files) win.args.files = []
+    
+    if (!win.args.files.includes(entry.path)) {
+      win.args.files.push(entry.path)
+    }
+    win.args.activeFile = entry.path
+    wsSend({ type: 'UpdateWindow', window: win })
   }
 }
 
@@ -97,17 +141,53 @@ function fileIcon(entry: FileEntry) {
   return map[ext ?? ''] ?? '📄'
 }
 
-// ─── Tab management ───────────────────────────────────────────────────────────
-async function openFile(path: string, name: string) {
-  // Already open?
-  const existing = tabs.value.find(t => t.path === path)
-  if (existing) {
-    activeTab.value = path
-    mountEditor(existing)
-    return
+// ─── Sync Args logic (Global Shared Tabs) ──────────────────────────────────────
+let currentMode = ''
+let currentDirPath = ''
+
+watch(() => windows.value[props.winId]?.args, (newArgs) => {
+  if (!newArgs) return
+  
+  if (newArgs.mode !== currentMode) {
+    currentMode = newArgs.mode
+    showSidebar.value = newArgs.mode === 'dir'
+  }
+  if (newArgs.mode === 'dir' && newArgs.dirPath && newArgs.dirPath !== currentDirPath) {
+    currentDirPath = newArgs.dirPath
+    loadTree(newArgs.dirPath)
   }
 
-  // Load content
+  const requiredFiles: string[] = newArgs.files || []
+  const activeReq: string | undefined = newArgs.activeFile
+
+  // 1. Remove closed tabs
+  for (let i = tabs.value.length - 1; i >= 0; i--) {
+    if (!requiredFiles.includes(tabs.value[i].path)) {
+      if (tabs.value[i].path === activeTab.value) destroyEditor()
+      tabs.value.splice(i, 1)
+    }
+  }
+
+  // 2. Add new files
+  for (const path of requiredFiles) {
+    if (!tabs.value.find(t => t.path === path)) {
+      openFileLocal(path, path.split('/').pop() || '')
+    }
+  }
+
+  // 3. Set active tab
+  if (activeReq && activeTab.value !== activeReq) {
+    activeTab.value = activeReq
+    const tabToMount = tabs.value.find(t => t.path === activeReq)
+    if (tabToMount) mountEditor(tabToMount)
+    // If not found yet, `openFileLocal` will mount it once fetched
+  } else if (!activeReq) {
+    activeTab.value = null
+    destroyEditor()
+  }
+}, { deep: true, immediate: true })
+
+async function openFileLocal(path: string, name: string) {
   try {
     const res = await fetch(`/api/files/read?path=${encodeURIComponent(path)}`)
     if (!res.ok) return
@@ -115,28 +195,36 @@ async function openFile(path: string, name: string) {
     const version = Date.now()
     const tab: EditorTab = { path, name, content, dirty: false, version }
     tabs.value.push(tab)
-    activeTab.value = path
     docVersions.set(path, version)
-    await nextTick()
-    mountEditor(tab)
+    
+    const win = windows.value[props.winId]
+    if (win?.args?.activeFile === path) {
+      activeTab.value = path
+      await nextTick()
+      mountEditor(tab)
+    }
   } catch {}
 }
 
 function closeTab(path: string) {
-  const idx = tabs.value.findIndex(t => t.path === path)
-  if (idx < 0) return
-  const tab = tabs.value[idx]
-  if (tab.dirty && !confirm(`Close ${tab.name} without saving?`)) return
-  tabs.value.splice(idx, 1)
-  if (activeTab.value === path) {
-    activeTab.value = tabs.value.length ? tabs.value[Math.max(0, idx - 1)].path : null
-    if (activeTab.value) {
-      const next = tabs.value.find(t => t.path === activeTab.value)
-      if (next) nextTick(() => mountEditor(next))
-    } else {
-      destroyEditor()
-    }
+  const win = windows.value[props.winId]
+  if (!win || !win.args || !win.args.files) return
+  
+  const tab = tabs.value.find(t => t.path === path)
+  if (tab?.dirty && !confirm(`Close ${tab.name} without saving?`)) return
+  
+  win.args.files = win.args.files.filter((p: string) => p !== path)
+  if (win.args.activeFile === path) {
+    win.args.activeFile = win.args.files.length ? win.args.files[win.args.files.length - 1] : undefined
   }
+  wsSend({ type: 'UpdateWindow', window: win })
+}
+
+function setGlobalActiveTab(path: string) {
+  const win = windows.value[props.winId]
+  if (!win || !win.args) return
+  win.args.activeFile = path
+  wsSend({ type: 'UpdateWindow', window: win })
 }
 
 async function saveTab(path?: string) {
@@ -171,7 +259,6 @@ function mountEditor(tab: EditorTab) {
         tab.content = content
         tab.dirty = true
 
-        // Broadcast changes to other clients
         update.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
           const version = ++tab.version
           docVersions.set(tab.path, version)
@@ -189,7 +276,27 @@ function mountEditor(tab: EditorTab) {
           })
         })
       }
+      
+      if (update.selectionSet || update.docChanged) {
+        if (!suppressRemote && Date.now() - lastCursorEmit > 50) {
+          lastCursorEmit = Date.now()
+          const head = update.state.selection.main.head
+          const anchor = update.state.selection.main.anchor
+          wsSend({
+            type: 'EditorCursor',
+            cursor: {
+              file_path: tab.path,
+              user_id: myId.value,
+              user_name: myName.value,
+              user_color: myColor.value,
+              pos: head,
+              anchor
+            }
+          })
+        }
+      }
     }),
+    remoteCursorField,
     // Ctrl/Cmd+S to save
     keymap.of([{
       key: 'Mod-s',
@@ -242,25 +349,19 @@ function onWsMsg(e: MessageEvent) {
       } finally {
         suppressRemote = false
       }
+    } else if (msg.type === 'EditorCursor' && msg.cursor.user_id !== myId.value) {
+      const c = msg.cursor
+      if (c.file_path === activeTab.value && view) {
+        remoteCursorsMap.set(c.user_id, { pos: c.pos, name: c.user_name, color: c.user_color })
+        view.dispatch({ effects: setRemoteCursorsEffect.of(Array.from(remoteCursorsMap.values())) })
+      }
     }
   } catch {}
 }
 
-onMounted(() => {
-  const win = windows.value[props.winId]
-  if (win?.args) {
-    if (win.args.type === 'file') {
-      showSidebar.value = false
-      const name = win.args.path.split('/').pop() || ''
-      openFile(win.args.path, name)
-    } else if (win.args.type === 'dir') {
-      showSidebar.value = true
-      loadTree(win.args.path)
-    }
-  } else {
-    loadTree()
-  }
+let lastCursorEmit = 0
 
+onMounted(() => {
   ws.value?.addEventListener('message', onWsMsg)
 })
 onUnmounted(() => {
@@ -298,7 +399,7 @@ watch(ws, (n, o) => {
       <!-- Tabs -->
       <div v-if="tabs.length" class="tab-bar">
         <div v-for="tab in tabs" :key="tab.path"
-          @click="activeTab = tab.path; mountEditor(tab)"
+          @click="setGlobalActiveTab(tab.path)"
           class="tab" :class="{ active: activeTab === tab.path }">
           <span class="tab-name">{{ tab.dirty ? '● ' : '' }}{{ tab.name }}</span>
           <button @click.stop="closeTab(tab.path)" class="tab-close">✕</button>
@@ -403,4 +504,19 @@ watch(ws, (n, o) => {
 }
 .empty-icon { font-size: 36px; }
 .empty-label { font-size: 12px; }
+
+/* ── Remote Cursor Styles ────────────────────────────────────────── */
+:deep(.cm-remote-cursor) {
+  position: absolute; display: inline-block; z-index: 10;
+  pointer-events: none; margin-left: -1px;
+}
+:deep(.cm-remote-cursor-label) {
+  position: absolute; top: -16px; left: -1px;
+  color: #000; font-size: 9px; font-weight: 700;
+  padding: 1px 4px; border-radius: 4px 4px 4px 0;
+  white-space: nowrap; opacity: 0; transition: opacity 200ms;
+}
+:deep(.cm-remote-cursor:hover .cm-remote-cursor-label) {
+  opacity: 1;
+}
 </style>
