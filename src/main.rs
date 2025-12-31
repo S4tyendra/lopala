@@ -20,9 +20,9 @@ mod system;
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    /// Port to listen on
-    #[arg(short, long, default_value_t = 8080)]
-    port: u16,
+    /// Port to listen on. If omitted, defaults to 8080 (or a random 40000-60000 port if --tunnel is set).
+    #[arg(short, long)]
+    port: Option<u16>,
 
     /// Whether to start a public cloudflared tunnel
     #[arg(short, long, default_value_t = false)]
@@ -40,6 +40,16 @@ async fn main() -> anyhow::Result<()> {
 
     // 2. Parse CLI Arguments
     let args = Args::parse();
+    
+    let port = args.port.unwrap_or_else(|| {
+        if args.tunnel {
+            use rand::Rng;
+            rand::thread_rng().gen_range(40000..=60000)
+        } else {
+            8080
+        }
+    });
+
     info!("Starting Lopala Terminal Server...");
 
     // Clean the ephemeral live-stream dir on every startup
@@ -50,7 +60,7 @@ async fn main() -> anyhow::Result<()> {
 
     // 3. (Optional) Run Cloudflare Tunnel
     let _tunnel = if args.tunnel {
-        match tunnel::Tunnel::start(args.port).await {
+        match tunnel::Tunnel::start(port).await {
             Ok(t) => {
                 info!("Public tunnel initiated.");
                 Some(t)
@@ -65,7 +75,7 @@ async fn main() -> anyhow::Result<()> {
     };
 
     // 4. Start HTTP Server (with graceful CTRL-C cleanup)
-    info!("Lopala UI ready at http://localhost:{}", args.port);
+    info!("Lopala UI ready at http://localhost:{}", port);
     let global_state = state::GlobalState::new();
 
     // Upload sessions store + 3-min idle reaper
@@ -76,7 +86,7 @@ async fn main() -> anyhow::Result<()> {
     system::start_vitals_loop(global_state.clone());
 
     tokio::select! {
-        res = server::start_server(args.port, global_state, upload_sessions) => { res? }
+        res = server::start_server(port, global_state, upload_sessions) => { res? }
         _ = tokio::signal::ctrl_c() => {
             info!("Shutting down — clearing live stream dir");
             let _ = std::fs::remove_dir_all(live_dir);

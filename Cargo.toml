@@ -25,6 +25,9 @@ hex = "0.4"
 uuid = { version = "1.8", features = ["v4"] }
 sysinfo = "0.30"
 base64 = "0.22"
+rand = "0.10.0"
+reqwest = "0.13.2"
+which = "8.0.2"
 
 [build-dependencies]
 anyhow = "1.0"
