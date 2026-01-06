@@ -27,6 +27,10 @@ struct Args {
     /// Whether to start a public cloudflared tunnel
     #[arg(short, long, default_value_t = false)]
     tunnel: bool,
+
+    /// 4-digit PIN for authentication. If not provided, one is generated.
+    #[arg(long)]
+    pin: Option<String>,
 }
 
 #[tokio::main]
@@ -43,14 +47,24 @@ async fn main() -> anyhow::Result<()> {
     
     let port = args.port.unwrap_or_else(|| {
         if args.tunnel {
-            use rand::Rng;
-            rand::thread_rng().gen_range(40000..=60000)
+            let nanos = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().subsec_nanos();
+            let p = 40000 + (nanos % 20000);
+            p as u16
         } else {
             8080
         }
     });
 
+    let pin = args.pin.unwrap_or_else(|| {
+        let nanos = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().subsec_nanos();
+        let p = 1000 + (nanos % 9000);
+        format!("{:04}", p)
+    });
+
     info!("Starting Lopala Terminal Server...");
+    info!("===================================");
+    info!(" AUTH PIN: {}", pin);
+    info!("===================================");
 
     // Clean the ephemeral live-stream dir on every startup
     let live_dir = "/tmp/lopala/live";
@@ -86,7 +100,7 @@ async fn main() -> anyhow::Result<()> {
     system::start_vitals_loop(global_state.clone());
 
     tokio::select! {
-        res = server::start_server(port, global_state, upload_sessions) => { res? }
+        res = server::start_server(port, pin, global_state, upload_sessions) => { res? }
         _ = tokio::signal::ctrl_c() => {
             info!("Shutting down — clearing live stream dir");
             let _ = std::fs::remove_dir_all(live_dir);

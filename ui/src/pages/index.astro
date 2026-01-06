@@ -63,35 +63,75 @@ import App from '@/App.vue';
 			.login-title { font-size: 24px; font-weight: 600; color: white; margin: 0; letter-spacing: -0.02em; text-shadow: 0 2px 8px rgba(0,0,0,0.4); }
 			
 			.login-input-wrap {
-				position: relative; width: 220px;
-				border-radius: 100px; background: rgba(255,255,255,0.15);
-				border: 1px solid rgba(255,255,255,0.25);
-				box-shadow: inset 0 1px 2px rgba(0,0,0,0.2), 0 4px 12px rgba(0,0,0,0.2);
-				backdrop-filter: blur(12px); overflow: hidden;
-				display: flex; align-items: center;
-				transition: background 0.2s, border-color 0.2s;
+				position: relative;
+				width: 280px;
+				border-radius: 18px;
+				background: rgba(255, 255, 255, 0.08);
+				border: 1px solid rgba(255, 255, 255, 0.15);
+				backdrop-filter: blur(20px);
+				padding: 24px;
+				display: flex;
+				flex-direction: column;
+				gap: 20px;
+				box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+				transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 			}
-			.login-input-wrap:focus-within {
-				background: rgba(255,255,255,0.25);
-				border-color: rgba(255,255,255,0.5);
+
+			.login-input-wrap.error {
+				animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+				border-color: rgba(239, 68, 68, 0.4);
 			}
-			.login-input {
-				width: 100%; border: none; background: transparent; color: white; outline: none;
-				padding: 10px 45px 10px 18px; font-size: 15px; font-weight: 500; font-family: inherit;
+
+			@keyframes shake {
+				10%, 90% { transform: translate3d(-1px, 0, 0); }
+				20%, 80% { transform: translate3d(2px, 0, 0); }
+				30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+				40%, 60% { transform: translate3d(4px, 0, 0); }
 			}
-			.login-input::placeholder { color: rgba(255,255,255,0.4); }
-			
+
+			.input-field {
+				background: rgba(0, 0, 0, 0.2);
+				border: 1px solid rgba(255, 255, 255, 0.1);
+				border-radius: 10px;
+				padding: 12px 16px;
+				color: white;
+				font-size: 15px;
+				outline: none;
+				width: 100%;
+				transition: all 0.2s;
+			}
+
+			.input-field:focus {
+				border-color: rgba(255, 255, 255, 0.3);
+				background: rgba(0, 0, 0, 0.3);
+			}
+
 			.login-submit {
-				position: absolute; right: 5px; top: 50%; transform: translateY(-50%);
-				width: 26px; height: 26px; border-radius: 50%;
-				background: rgba(255,255,255,0.8); border: none;
-				display: flex; align-items: center; justify-content: center;
-				cursor: pointer; transition: 0.1s; opacity: 0;
+				background: white;
+				color: black;
+				border: none;
+				border-radius: 10px;
+				padding: 12px;
+				font-weight: 600;
+				cursor: pointer;
+				transition: all 0.2s;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				gap: 8px;
 			}
-			.login-input:not(:placeholder-shown) + .login-submit { opacity: 1; }
-			.login-submit:hover { background: white; transform: translateY(-50%) scale(1.08); }
-			.login-submit:active { transform: translateY(-50%) scale(0.95); }
-			.arrow-svg { fill: #000; width: 14px; }
+
+			.login-submit:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(255,255,255,0.2); }
+			.login-submit:active { transform: translateY(0); }
+			.login-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+
+			#auth-status {
+				font-size: 13px;
+				color: #ef4444;
+				text-align: center;
+				min-height: 20px;
+				font-weight: 500;
+			}
 		</style>
 	</head>
 	<body>
@@ -111,11 +151,14 @@ import App from '@/App.vue';
 				<div class="avatar-clip">
 					<svg class="avatar-svg" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
 				</div>
-				<h1 class="login-title">Lopala OS</h1>
-				<form class="login-input-wrap" onsubmit="event.preventDefault(); submitLogin();">
-					<input id="login-name-input" class="login-input" type="text" placeholder="Enter Name" autocomplete="off" spellcheck="false" required>
-					<button class="login-submit" type="submit">
-						<svg class="arrow-svg" viewBox="0 0 24 24"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg>
+				<h1 class="login-title" style="margin-bottom: 8px;">Lopala OS</h1>
+				<form id="login-form" class="login-input-wrap" onsubmit="event.preventDefault(); submitLogin();">
+					<div id="auth-status"></div>
+					<input id="login-name-input" class="input-field" type="text" placeholder="Username" autocomplete="off" required>
+					<input id="login-pin-input" class="input-field" type="password" placeholder="PIN Code" autocomplete="off" required inputmode="numeric" maxlength="4">
+					<button id="login-btn" class="login-submit" type="submit">
+						<span>Unlock Terminal</span>
+						<svg style="width: 16px; height: 16px;" viewBox="0 0 24 24"><path fill="currentColor" d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg>
 					</button>
 				</form>
 			</div>
@@ -129,10 +172,12 @@ import App from '@/App.vue';
 			// Boot Sequence Exec
 			window.onload = () => {
 				const hasName = localStorage.getItem('lopala_name');
+				// We don't check for cookie here anymore to ENFORCE pin on refresh
 				const boot = document.getElementById('bootloader');
 				const prog = document.getElementById('boot-progress');
 				const login = document.getElementById('login-screen');
 				const input = document.getElementById('login-name-input');
+				const pinInput = document.getElementById('login-pin-input');
 
 				// Simulate fast boot loading
 				if (prog) setTimeout(() => { prog.style.width = '45%'; }, 100);
@@ -142,38 +187,73 @@ import App from '@/App.vue';
 					if (boot) boot.style.opacity = '0';
 					setTimeout(() => boot && boot.remove(), 800);
 
-					if (hasName) {
-						// Already logged in! Instantly boot to desktop.
-						window.lopalaName = hasName;
-						window.dispatchEvent(new Event('app-login'));
-					} else if (login) {
-						// Show login screen
+					// Always show login screen to verify PIN on fresh load
+					if (login) {
+						if (hasName && input) input.value = hasName;
 						login.style.opacity = '1';
 						login.style.transform = 'scale(1)';
 						login.style.pointerEvents = 'auto';
-						if (input) setTimeout(() => input.focus(), 800);
+						if (hasName && pinInput) {
+							setTimeout(() => pinInput.focus(), 800);
+						} else if (input) {
+							setTimeout(() => input.focus(), 800);
+						}
 					}
 				}, 1100);
 			};
 
-			window.submitLogin = () => {
-				const inputEl = document.getElementById('login-name-input');
-				if (!inputEl) return;
-				const val = inputEl.value.trim();
-				if (!val) return;
-				localStorage.setItem('lopala_name', val);
-				window.lopalaName = val;
-				
-				const login = document.getElementById('login-screen');
-				if (login) {
-					login.style.transform = 'scale(1.1)';
-					login.style.opacity = '0';
-					login.style.pointerEvents = 'none';
-					setTimeout(() => login.remove(), 1000);
-				}
+			window.submitLogin = async () => {
+				const form = document.getElementById('login-form');
+				const nameInput = document.getElementById('login-name-input');
+				const pinInput = document.getElementById('login-pin-input');
+				const status = document.getElementById('auth-status');
+				const btn = document.getElementById('login-btn');
 
-				// Signal Vue to mount/connect WS
-				window.dispatchEvent(new Event('app-login'));
+				if (!nameInput || !pinInput || !status || !btn) return;
+
+				const name = nameInput.value.trim();
+				const pin = pinInput.value.trim();
+
+				if (!name || !pin) return;
+
+				btn.disabled = true;
+				status.textContent = '';
+				form.classList.remove('error');
+
+				try {
+					// Verify pin with backend
+					const res = await fetch('/api/auth/verify', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({ pin })
+					});
+
+					if (res.ok) {
+						localStorage.setItem('lopala_name', name);
+						window.lopalaName = name;
+						
+						// Session cookie: no max-age, deleted on browser close
+						document.cookie = `lopala_pin=${pin}; path=/; samesite=strict`;
+						
+						const login = document.getElementById('login-screen');
+						if (login) {
+							login.style.transform = 'scale(1.1)';
+							login.style.opacity = '0';
+							login.style.pointerEvents = 'none';
+							setTimeout(() => login.remove(), 1000);
+						}
+						window.dispatchEvent(new Event('app-login'));
+					} else {
+						form.classList.add('error');
+						status.textContent = 'Invalid PIN Code';
+						pinInput.value = '';
+						pinInput.focus();
+					}
+				} catch (e) {
+					status.textContent = 'Connection Error';
+				} finally {
+					btn.disabled = false;
+				}
 			};
 		</script>
 	</body>
