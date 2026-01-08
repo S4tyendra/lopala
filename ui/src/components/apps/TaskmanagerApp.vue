@@ -58,7 +58,7 @@ let pollTimer: ReturnType<typeof setInterval> | null = null
 async function fetchProcs() {
   loading.value = true
   try {
-    const res = await fetch('/api/system/ps')
+    const res = await fetch(`/api/system/ps?_=${Date.now()}`)
     if (res.ok) procs.value = await res.json()
   } catch {}
   loading.value = false

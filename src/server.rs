@@ -152,7 +152,13 @@ async fn auth_middleware(
         return (StatusCode::UNAUTHORIZED, "Unauthorized").into_response();
     }
 
-    next.run(request).await
+    let mut response = next.run(request).await;
+    let headers = response.headers_mut();
+    headers.insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store, no-cache, must-revalidate, proxy-revalidate"));
+    headers.insert(header::PRAGMA, HeaderValue::from_static("no-cache"));
+    headers.insert(header::EXPIRES, HeaderValue::from_static("0"));
+    
+    response
 }
 
 #[derive(serde::Deserialize)]

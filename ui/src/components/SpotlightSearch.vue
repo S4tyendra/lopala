@@ -56,7 +56,7 @@ const doSearch = async (q: string) => {
   if (!q.trim()) { fileResults.value = []; rgError.value = null; return }
   searching.value = true
   try {
-    const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`)
+    const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&_=${Date.now()}`)
     if (res.status === 503) {
       const err = await res.json()
       rgError.value = err.message

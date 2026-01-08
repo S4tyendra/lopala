@@ -26,7 +26,7 @@ let isSettingScroll = false
 const fetchDisplays = async () => {
   loadingDisplays.value = true
   try {
-    const res = await fetch('/api/displays')
+    const res = await fetch(`/api/displays?_=${Date.now()}`)
     if (res.ok) {
       displays.value = await res.json()
       if (!s.value.display && displays.value.length > 0) {
@@ -43,7 +43,7 @@ const fetchDisplays = async () => {
 const fetchFiles = async (display: string) => {
   loadingFiles.value = true
   try {
-    const res = await fetch(`/api/files?path=${encodeURIComponent('/tmp/lopala/screenshots/' + display)}`)
+    const res = await fetch(`/api/files?path=${encodeURIComponent('/tmp/lopala/screenshots/' + display)}&_=${Date.now()}`)
     if (res.ok) {
       const entries: FileEntry[] = await res.json()
       // sort newest first
@@ -81,7 +81,7 @@ const closeImage = () => {
 const takeScreenshot = async () => {
   if (!s.value.display) return
   try {
-    const res = await fetch('/api/screenshots/take', {
+    const res = await fetch(`/api/screenshots/take?_=${Date.now()}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ display: s.value.display })
@@ -218,7 +218,7 @@ const openFileManager = () => {
           class="group relative aspect-video bg-black/40 rounded-lg overflow-hidden border border-white/5 hover:border-white/20 transition-all cursor-pointer shadow-md"
         >
           <img 
-            :src="`/api/files/download?path=${encodeURIComponent(f.path)}`" 
+            :src="`/api/files/download?path=${encodeURIComponent(f.path)}&_=${Date.now()}`" 
             class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
             loading="lazy"
           />
@@ -251,7 +251,7 @@ const openFileManager = () => {
           </button>
           
           <img 
-            :src="`/api/files/download?path=${encodeURIComponent(s.openedImage)}`" 
+            :src="`/api/files/download?path=${encodeURIComponent(s.openedImage)}&_=${Date.now()}`" 
             class="max-w-full max-h-[calc(100vh-100px)] object-contain rounded-md shadow-2xl border border-white/10"
           />
           

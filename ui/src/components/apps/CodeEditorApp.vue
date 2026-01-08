@@ -100,7 +100,7 @@ async function loadTree(path?: string) {
   if (path) treePath.value = path
   treeLoading.value = true
   try {
-    const res = await fetch(`/api/files?path=${encodeURIComponent(treePath.value)}`)
+    const res = await fetch(`/api/files?path=${encodeURIComponent(treePath.value)}&_=${Date.now()}`)
     if (res.ok) treeEntries.value = await res.json()
   } catch {}
   treeLoading.value = false
@@ -189,7 +189,7 @@ watch(() => windows.value[props.winId]?.args, (newArgs) => {
 
 async function openFileLocal(path: string, name: string) {
   try {
-    const res = await fetch(`/api/files/read?path=${encodeURIComponent(path)}`)
+    const res = await fetch(`/api/files/read?path=${encodeURIComponent(path)}&_=${Date.now()}`)
     if (!res.ok) return
     const content = await res.text()
     const version = Date.now()
@@ -234,7 +234,7 @@ async function saveTab(path?: string) {
   if (!tab) return
   saving.value = true
   try {
-    const res = await fetch('/api/files/write', {
+    const res = await fetch(`/api/files/write?_=${Date.now()}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ path: tab.path, content: tab.content }),

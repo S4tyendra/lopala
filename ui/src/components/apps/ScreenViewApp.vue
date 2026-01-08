@@ -12,7 +12,7 @@ const isReady = ref(false)
 
 const fetchDisplays = async () => {
   try {
-    const res = await fetch('/api/displays')
+    const res = await fetch(`/api/displays?_=${Date.now()}`)
     if (res.ok) {
       displays.value = await res.json()
       if (!selectedDisplay.value && displays.value.length > 0)

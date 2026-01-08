@@ -109,7 +109,7 @@ async function _fetchAndSetEntries(path: string) {
   s.path = path
   s.loading = true
   try {
-    const res = await fetch(`/api/files?path=${encodeURIComponent(path)}`)
+    const res = await fetch(`/api/files?path=${encodeURIComponent(path)}&_=${Date.now()}`)
     if (!res.ok) throw new Error(await res.text())
     const entries: FileEntry[] = await res.json()
     s.entries = entries.sort((a, b) => {
@@ -152,7 +152,7 @@ export async function openEntry(entry: FileEntry, localOnly = false) {
     content = '__embed__'
   } else if (/^(text\/|application\/(json|xml|javascript|typescript))/.test(m)) {
     try {
-      const res = await fetch(`/api/files/read?path=${encodeURIComponent(entry.path)}`)
+      const res = await fetch(`/api/files/read?path=${encodeURIComponent(entry.path)}&_=${Date.now()}`)
       content = res.ok ? await res.text() : `Error: ${await res.text()}`
     } catch (e) { content = String(e) }
   } else {

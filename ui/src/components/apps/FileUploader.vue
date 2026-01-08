@@ -131,7 +131,7 @@ async function uploadFile(u: FileUpload) {
 
   // 1. Init session
   try {
-    const res = await fetch('/api/files/upload/init', {
+    const res = await fetch(`/api/files/upload/init?_=${Date.now()}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -182,7 +182,7 @@ async function uploadFile(u: FileUpload) {
   // 3. Complete
   try {
     const res = await fetch(
-      `/api/files/upload/chunk?session_id=${u.sessionId}&part=0&hash=complete&process=true`,
+      `/api/files/upload/chunk?session_id=${u.sessionId}&part=0&hash=complete&process=true&_=${Date.now()}`,
       { method: 'POST', body: new Uint8Array(0) }
     )
     if (!res.ok) {
@@ -236,7 +236,7 @@ function uploadWithProgress(
     const xhr = new XMLHttpRequest()
     xhr.open(
       'POST',
-      `/api/files/upload/chunk?session_id=${sessionId}&part=${chunk.index}&hash=${hash}`
+      `/api/files/upload/chunk?session_id=${sessionId}&part=${chunk.index}&hash=${hash}&_=${Date.now()}`
     )
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) chunk.progress = e.loaded
