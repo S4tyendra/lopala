@@ -118,19 +118,22 @@ onUnmounted(() => {
   border-top: 1px solid rgba(255,255,255,0.06);
 }
 .copy-btn {
-  padding: 2px 8px; border-radius: 5px; font-size: 10px;
-  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
-  color: rgba(255,255,255,0.4); cursor: pointer; transition: all 100ms;
+  padding: 3px 10px; border-radius: 6px; font-size: 10px; font-weight: 500;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.5); cursor: pointer; transition: all 150ms var(--ease-out);
   font-family: inherit; white-space: nowrap;
 }
-.copy-btn:hover { background: rgba(255,255,255,0.1); color: white; }
+.copy-btn:hover { background: rgba(255,255,255,0.08); color: white; border-color: rgba(255,255,255,0.12); }
+.copy-btn:active { transform: scale(0.96); }
 
 .copied-badge {
-  margin-left: auto; font-size: 10px; color: #34d399;
-  padding: 1px 8px; border-radius: 4px;
-  background: rgba(52,211,153,0.12);
+  margin-left: auto; font-size: 10px; font-weight: 600; color: #34d399;
+  padding: 2px 10px; border-radius: 6px;
+  background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.2);
 }
 
-.fade-enter-active, .fade-leave-active { transition: opacity 200ms; }
-.fade-enter-from, .fade-leave-to { opacity: 0; }
+.fade-enter-active { transition: opacity 250ms var(--ease-out), transform 300ms var(--ease-out); }
+.fade-leave-active { transition: opacity 200ms var(--ease-out); }
+.fade-enter-from { opacity: 0; transform: translateY(4px) scale(0.95); }
+.fade-leave-to { opacity: 0; }
 </style>

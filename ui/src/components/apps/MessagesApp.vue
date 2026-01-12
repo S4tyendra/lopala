@@ -93,9 +93,9 @@ const activeChannel = computed(() => channels.value.find(c => c.id === props.cha
       <div ref="chatEl" class="flex-1 overflow-y-auto p-3 flex flex-col gap-2 min-w-0">
         <div v-for="msg in myMessages" :key="msg.id"
           :class="['flex flex-col min-w-0', msg.user_name === myName ? 'items-end' : 'items-start']"
-          style="animation:popIn 180ms cubic-bezier(0.175,0.885,0.32,1.1) both">
+          style="animation:popIn 250ms var(--ease-out) both">
           <span class="text-[9px] px-1 mb-0.5" style="color:rgba(255,255,255,0.22)">{{ msg.user_name }}</span>
-          <div class="px-3 py-2 rounded-2xl text-[13px] leading-relaxed max-w-[80%] break-all"
+          <div class="px-3 py-2 rounded-2xl text-[13px] leading-relaxed max-w-[80%] break-all transition-transform duration-200 active:scale-[0.98]"
             :class="msg.user_name === myName ? 'rounded-br-[4px]' : 'rounded-bl-[4px]'"
             :style="msg.user_name === myName
               ? 'background:#0a84ff;color:white'
@@ -120,22 +120,20 @@ const activeChannel = computed(() => channels.value.find(c => c.id === props.cha
 </template>
 
 <style scoped>
-/* Force Samsung font for ALL emoji rendering in this component */
-.emoji-text, .emoji-btn, .emoji-pick-btn {
-  font-family: 'SamsungOneUI', 'Samsung Color Emoji', 'Noto Color Emoji', emoji, sans-serif !important;
-}
+/* Force Samsung font handled via global.css */
 
 .emoji-btn {
   font-size: 20px;
   line-height: 1;
   background: rgba(255,255,255,0.04);
   border: none;
-  transition: all 150ms;
+  transition: all 200ms var(--ease-out);
 }
-.emoji-btn:hover { background: rgba(255,255,255,0.10); transform: scale(1.1); }
+.emoji-btn:hover { background: rgba(255,255,255,0.12); transform: scale(1.15) translateY(-2px); }
+.emoji-btn:active { transform: scale(0.92); }
 .emoji-btn.active {
   background: rgba(96,165,250,0.25);
-  box-shadow: 0 0 0 1.5px #60a5fa;
+  box-shadow: 0 0 0 1.5px #60a5fa, 0 4px 12px rgba(0,0,0,0.3);
 }
 
 /* Picker: fixed-width grid, opens to the right of the sidebar */
@@ -149,11 +147,12 @@ const activeChannel = computed(() => channels.value.find(c => c.id === props.cha
   gap: 4px;
   padding: 8px;
   border-radius: 16px;
-  background: rgba(28,28,34,0.98);
-  border: 1px solid rgba(255,255,255,0.10);
-  backdrop-filter: blur(20px);
-  box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+  background: rgba(26,26,30,0.95);
+  border: 1px solid rgba(255,255,255,0.1);
+  backdrop-filter: blur(40px) saturate(160%);
+  box-shadow: 0 12px 48px rgba(0,0,0,0.6);
   width: max-content;
+  animation: popIn 300ms var(--ease-out) both;
 }
 
 .emoji-pick-btn {
@@ -168,10 +167,11 @@ const activeChannel = computed(() => channels.value.find(c => c.id === props.cha
   background: rgba(255,255,255,0.04);
   border: none;
   cursor: pointer;
-  transition: background 100ms, transform 100ms;
+  transition: all 150ms var(--ease-out);
 }
 .emoji-pick-btn:hover {
   background: rgba(255,255,255,0.12);
-  transform: scale(1.15);
+  transform: scale(1.22);
 }
+.emoji-pick-btn:active { transform: scale(0.9); }
 </style>

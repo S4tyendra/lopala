@@ -27,7 +27,7 @@ const restoreMin = () => {
 
 <template>
   <div
-    class="absolute flex flex-col overflow-hidden transition-[left,top,width,height,opacity,background,border-radius] duration-300"
+    class="absolute flex flex-col overflow-hidden transition-[left,top,width,height,opacity,background,border-radius] duration-250 ease-[var(--ease-out)]"
     :style="isMin ? {
       left: '20px',
       top: `calc(100% - ${90 + (slot ?? 0) * 50}px)`,
@@ -53,7 +53,7 @@ const restoreMin = () => {
       border: '1px solid rgba(255,255,255,0.13)',
       boxShadow: '0 30px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.18)',
     }"
-    style="animation: winEnter 220ms cubic-bezier(0.23,1,0.32,1) both; will-change: transform, left, top, width, height;"
+    style="animation: winEnter 250ms var(--ease-out) both; will-change: transform, left, top, width, height;"
     @mousedown="isMin ? restoreMin() : focusWindow(win.id)"
   >
     <!-- Title Bar -->
@@ -65,15 +65,15 @@ const restoreMin = () => {
       <!-- Traffic lights -->
       <div v-show="!isMin" class="flex gap-2 z-10" @mousedown.stop>
         <button @click.stop="closeWindow(win.id)"
-          class="w-3 h-3 rounded-full border flex items-center justify-center transition-[transform,filter] duration-100 active:scale-90 hover:brightness-120"
+          class="w-3.5 h-3.5 rounded-full border flex items-center justify-center transition-[transform,filter] duration-150 var(--ease-out) active:scale-90 hover:brightness-110"
           style="background:#ff5f56;border-color:rgba(0,0,0,0.25)">
         </button>
         <button @click.stop="win.minimized = true; broadcastWin(win)"
-          class="w-3 h-3 rounded-full border flex items-center justify-center transition-[transform,filter] duration-100 active:scale-90 hover:brightness-120"
+          class="w-3.5 h-3.5 rounded-full border flex items-center justify-center transition-[transform,filter] duration-150 var(--ease-out) active:scale-90 hover:brightness-110"
           style="background:#ffbd2e;border-color:rgba(0,0,0,0.25)">
         </button>
         <button @click.stop="toggleMaximize(win)"
-          class="w-3 h-3 rounded-full border flex items-center justify-center transition-[transform,filter] duration-100 active:scale-90 hover:brightness-120"
+          class="w-3.5 h-3.5 rounded-full border flex items-center justify-center transition-[transform,filter] duration-150 var(--ease-out) active:scale-90 hover:brightness-110"
           style="background:#27c93f;border-color:rgba(0,0,0,0.25)">
         </button>
       </div>

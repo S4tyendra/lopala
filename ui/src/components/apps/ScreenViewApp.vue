@@ -275,24 +275,22 @@ onUnmounted(() => {
 
 <template>
   <div class="flex flex-col h-full overflow-hidden"
-    style="background:#0a0a0b; color:#c8c8d0; font-family:'IBM Plex Mono',monospace">
+    style="background:#0a0a0b; color:#c8c8d0;">
 
     <!-- Header -->
     <div class="flex-none flex items-center justify-between px-3 py-2 border-b"
-      style="border-color:#1e1e24; background:#111114">
+      style="border-color:#1e1e24;">
 
       <select :value="selectedDisplay"
         @change="e => (selectedDisplay = (e.target as HTMLSelectElement).value)"
-        class="rounded px-2 py-1 outline-none cursor-pointer text-[12px]"
-        style="background:rgba(255,255,255,0.05); border:1px solid #1e1e24; color:#c8c8d0; font-family:inherit">
+        class="rounded px-2 py-1 outline-none cursor-pointer text-[12px] bg-white/5 border border-[#1e1e24] color-[#c8c8d0]">
         <option v-for="d in displays" :key="d.name" :value="d.name" style="background:#111114">
           {{ d.name }} — {{ d.description }}
         </option>
       </select>
 
       <button @click="toggleLive" :disabled="!selectedDisplay"
-        class="flex items-center gap-2 px-3 py-1 text-[10px] uppercase tracking-widest transition-all duration-150 disabled:opacity-25"
-        style="font-family:inherit; border:1px solid; background:transparent; cursor:pointer"
+        class="flex items-center gap-2 px-3 py-1.5 text-[10px] uppercase font-bold tracking-widest transition-all duration-250 var(--ease-out) disabled:opacity-20 active:scale-95 border bg-transparent cursor-pointer rounded"
         :style="isLive
           ? 'border-color:rgba(239,68,68,0.5); color:#f87171'
           : 'border-color:rgba(74,222,128,0.3); color:#4ade80'">
@@ -300,7 +298,7 @@ onUnmounted(() => {
           <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style="background:#f87171"></span>
           <span class="relative inline-flex rounded-full h-1.5 w-1.5" style="background:#ef4444"></span>
         </span>
-        {{ isLive ? '■ stop' : '▶ live' }}
+        {{ isLive ? 'stop' : 'live' }}
       </button>
     </div>
 
@@ -344,6 +342,18 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-.fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
-.fade-enter-from, .fade-leave-to { opacity: 0; }
+.screenview-root {
+  display: flex; flex-direction: column; height: 100%;
+  color: #c8c8d0; background: #111114;
+}
+.fade-enter-active {
+  transition: opacity 350ms var(--ease-out);
+}
+.fade-leave-active {
+  transition: opacity 250ms var(--ease-out);
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
 </style>

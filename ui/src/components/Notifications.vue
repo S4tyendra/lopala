@@ -62,20 +62,20 @@ const accentColor = (type: string) => {
 
 <style scoped>
 .notif-enter-active {
-  transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+  transition: opacity 250ms var(--ease-out), transform 300ms var(--ease-out);
 }
 .notif-leave-active {
-  transition: all 0.22s cubic-bezier(0.4, 0, 1, 1);
+  transition: opacity 200ms var(--ease-in), transform 200ms var(--ease-in);
 }
 .notif-enter-from {
   opacity: 0;
-  transform: translateX(32px) scale(0.95);
+  transform: translateX(20px) scale(0.98);
 }
 .notif-leave-to {
   opacity: 0;
-  transform: translateX(16px) scale(0.96);
+  transform: translateX(20px) scale(0.98);
 }
 .notif-move {
-  transition: transform 0.28s cubic-bezier(0.23, 1, 0.32, 1);
+  transition: transform 300ms var(--ease-out);
 }
 </style>

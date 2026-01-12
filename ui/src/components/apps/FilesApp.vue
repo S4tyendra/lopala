@@ -285,7 +285,7 @@ const previewEntry = computed(() => {
             :style="s.selected.has(entry.path)
               ? 'background:rgba(96,165,250,0.2);outline:1.5px solid rgba(96,165,250,0.5);'
               : 'background:transparent'"
-            class="flex flex-col items-center gap-1 p-2 rounded-xl cursor-pointer transition-[background] duration-100 hover:brightness-125 select-none"
+            class="flex flex-col items-center gap-1 p-2 rounded-xl cursor-pointer transition-all duration-200 ease-[var(--ease-out)] select-none active:scale-95"
             :class="s.selected.has(entry.path) ? '' : 'hover:bg-white/5'">
 
             <!-- Rename mode -->
@@ -321,7 +321,7 @@ const previewEntry = computed(() => {
             :style="s.selected.has(entry.path)
               ? 'background:rgba(96,165,250,0.18)'
               : ''"
-            class="flex items-center gap-3 px-3 py-1.5 rounded-lg cursor-pointer transition-[background] duration-100 select-none"
+            class="flex items-center gap-3 px-3 py-1.5 rounded-lg cursor-pointer transition-all duration-150 ease-[var(--ease-out)] select-none active:scale-[0.99]"
             :class="s.selected.has(entry.path) ? '' : 'hover:bg-white/5'">
 
             <span class="text-sm leading-none shrink-0">{{ fileIcon(entry) }}</span>
@@ -441,15 +441,16 @@ const previewEntry = computed(() => {
   align-items: center;
   gap: 10px;
   width: 100%;
-  padding: 6px 14px;
+  padding: 8px 14px;
   text-align: left;
   font-size: 13px;
   font-weight: 500;
   color: rgba(255,255,255,0.85);
   cursor: pointer;
-  transition: background 100ms;
+  transition: background 150ms var(--ease-out);
 }
 .ctx-item:hover { background: rgba(96,165,250,0.15); color: white; }
+.ctx-item:active { transform: scale(0.98); }
 .ctx-item > span { font-size: 15px; width: 18px; text-align: center; }
 .ctx-danger { color: #f87171; }
 .ctx-danger:hover { background: rgba(248,113,113,0.15); color: #fca5a5; }
@@ -463,9 +464,9 @@ const previewEntry = computed(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0,0,0,0.45);
-  backdrop-filter: blur(4px);
+  background: rgba(0,0,0,0.4);
+  backdrop-filter: blur(8px);
 }
-.up-fade-enter-active, .up-fade-leave-active { transition: opacity 180ms ease, transform 180ms ease; }
-.up-fade-enter-from, .up-fade-leave-to { opacity: 0; transform: scale(0.96); }
+.up-fade-enter-active, .up-fade-leave-active { transition: opacity 250ms var(--ease-out), transform 250ms var(--ease-out); }
+.up-fade-enter-from, .up-fade-leave-to { opacity: 0; transform: scale(0.96) translateY(10px); }
 </style>

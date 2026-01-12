@@ -324,14 +324,14 @@ onUnmounted(() => {
 
 <style scoped>
 .spotlight-enter-active {
-  transition: opacity 0.18s ease, transform 0.18s cubic-bezier(0.23,1,0.32,1);
+  transition: opacity 250ms var(--ease-out), transform 320ms var(--ease-out);
 }
 .spotlight-leave-active {
-  transition: opacity 0.12s ease, transform 0.12s ease;
+  transition: opacity 180ms var(--ease-out), transform 180ms var(--ease-out);
 }
 .spotlight-enter-from,
 .spotlight-leave-to {
   opacity: 0;
-  transform: translateY(-8px) scale(0.97);
+  transform: translateY(-20px) scale(0.985);
 }
 </style>

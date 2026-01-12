@@ -125,7 +125,8 @@ watch(ws, (newWs, oldWs) => {
 </script>
 
 <template>
-  <div class="tm-root">
+  <div class="flex flex-col h-full overflow-hidden"
+    style="background:#0a0a0b; color:#c8c8d0;">
     
     <!-- ── Header Toolbar ────────────────────────────────────────────── -->
     <div class="toolbar">
@@ -156,10 +157,10 @@ watch(ws, (newWs, oldWs) => {
               <span class="proc-icon">⚙️</span>
               <span class="proc-name">{{ p.name }}</span>
             </td>
-            <td class="text-right num-font" :class="{ 'warn': p.cpu > 10, 'crit': p.cpu > 50 }">{{ p.cpu.toFixed(1) }}</td>
-            <td class="text-right num-font">{{ p.mem_mb }} MB</td>
-            <td class="num-font opacity-70">{{ p.user }}</td>
-            <td class="num-font opacity-50">{{ p.pid }}</td>
+            <td class="text-right" :class="{ 'warn': p.cpu > 10, 'crit': p.cpu > 50 }">{{ p.cpu.toFixed(1) }}</td>
+            <td class="text-right">{{ p.mem_mb }} MB</td>
+            <td class="opacity-70">{{ p.user }}</td>
+            <td class="opacity-50">{{ p.pid }}</td>
             <td class="col-cmd">
               <button @click.stop="killProc(p.pid)" class="kill-btn" :disabled="killing === p.pid" title="Force Quit">
                 {{ killing === p.pid ? '…' : '✕' }}
@@ -204,11 +205,9 @@ watch(ws, (newWs, oldWs) => {
 </template>
 
 <style scoped>
-.tm-root {
+.taskmanager-root {
   display: flex; flex-direction: column; height: 100%;
-  background: #1e1e24; color: #ececec;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
-  overflow: hidden; font-size: 13px;
+  color: #c8c8d0; background: #111114;
 }
 
 /* ── Toolbar ──────────────────────────────────────────────────────── */
@@ -227,23 +226,23 @@ watch(ws, (newWs, oldWs) => {
 }
 .filter-input {
   width: 100%; padding: 6px 10px 6px 30px; border-radius: 6px;
-  background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08);
   color: white; font-size: 13px; outline: none; font-family: inherit;
-  transition: all 150ms; box-shadow: inset 0 1px 2px rgba(0,0,0,0.2);
+  transition: all 200ms var(--ease-out); box-shadow: inset 0 1px 2px rgba(0,0,0,0.2);
 }
 .filter-input:focus {
-  background: rgba(0,0,0,0.5); border-color: #60a5fa;
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.2), 0 0 0 2px rgba(96,165,250,0.3);
+  background: rgba(0,0,0,0.5); border-color: rgba(96,165,250,0.5);
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.2), 0 0 0 2px rgba(96,165,250,0.2);
 }
 .btn-icon {
-  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
   color: white; width: 30px; height: 30px; border-radius: 6px;
   cursor: pointer; display: flex; align-items: center; justify-content: center;
-  font-size: 16px; transition: 100ms; box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  font-size: 16px; transition: all 150ms var(--ease-out); box-shadow: 0 1px 2px rgba(0,0,0,0.2);
 }
-.btn-icon:hover { background: rgba(255,255,255,0.15); }
+.btn-icon:hover { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.15); }
 .btn-icon:active { transform: scale(0.96); }
-.btn-icon.spin { animation: spin 500ms linear infinite; }
+.btn-icon.spin { animation: spin 0.6s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ── Table ────────────────────────────────────────────────────────── */
@@ -265,12 +264,13 @@ th.sortable:hover { background: #2a2a32; color: white; }
 th.active { color: white; }
 
 td {
-  padding: 5px 12px; border-bottom: 1px solid rgba(255,255,255,0.03);
+  padding: 5px 12px; border-bottom: 1px solid rgba(255,255,255,0.02);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   vertical-align: middle;
+  transition: background 150ms var(--ease-out);
 }
-tr:hover { background: rgba(255,255,255,0.05); }
-tr:nth-child(even) { background: rgba(255,255,255,0.015); }
+tr:hover { background: rgba(255,255,255,0.04); }
+tr:nth-child(even) { background: rgba(255,255,255,0.012); }
 tr.high-cpu td { background: rgba(96,165,250,0.05); }
 
 .col-name { width: 40%; max-width: 250px; }

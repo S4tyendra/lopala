@@ -304,7 +304,7 @@ function mountEditor(tab: EditorTab) {
     }]),
     EditorView.theme({
       '&': { height: '100%', fontSize: '13px' },
-      '.cm-scroller': { overflow: 'auto', fontFamily: '"JetBrains Mono", monospace' },
+      '.cm-scroller': { overflow: 'auto', fontFamily: '"JetBrains Mono Nerd Font", monospace' },
       '.cm-content': { caretColor: '#00ffcc' },
     }),
   ]
@@ -426,7 +426,6 @@ watch(ws, (n, o) => {
 .editor-root {
   display: flex; height: 100%; overflow: hidden;
   background: #0c0c0e; color: #c8c8d0;
-  font-family: 'JetBrains Mono', monospace;
 }
 
 /* ── File Tree ────────────────────────────────────────────────────── */
@@ -451,12 +450,13 @@ watch(ws, (n, o) => {
 .tree-loading { padding: 12px; font-size: 10px; color: rgba(255,255,255,0.2); text-align: center; }
 .tree-item {
   display: flex; align-items: center; gap: 6px;
-  padding: 4px 12px; cursor: pointer; font-size: 11px;
-  color: rgba(255,255,255,0.7); transition: background 80ms;
+  padding: 6px 12px; cursor: pointer; font-size: 11px;
+  color: rgba(255,255,255,0.6); transition: all 150ms var(--ease-out);
   white-space: nowrap; overflow: hidden;
 }
-.tree-item:hover { background: rgba(255,255,255,0.05); }
-.tree-item.active { background: rgba(96,165,250,0.12); color: white; }
+.tree-item:hover { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.9); }
+.tree-item:active { transform: scale(0.98); }
+.tree-item.active { background: rgba(96,165,250,0.12); color: #60a5fa; font-weight: 500; }
 .tree-icon { font-size: 13px; flex-shrink: 0; }
 .tree-name { overflow: hidden; text-overflow: ellipsis; }
 
@@ -472,13 +472,18 @@ watch(ws, (n, o) => {
 .tab-bar::-webkit-scrollbar { display: none; }
 .tab {
   display: flex; align-items: center; gap: 6px;
-  padding: 6px 12px; font-size: 11px; cursor: pointer;
-  color: rgba(255,255,255,0.45); white-space: nowrap;
-  border-right: 1px solid rgba(255,255,255,0.04);
-  transition: all 100ms; flex-shrink: 0;
+  padding: 8px 14px; font-size: 11px; font-weight: 500; cursor: pointer;
+  color: rgba(255,255,255,0.4); white-space: nowrap;
+  border-right: 1px solid rgba(255,255,255,0.05);
+  transition: all 150ms var(--ease-out); flex-shrink: 0;
+  position: relative;
 }
-.tab:hover { background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.7); }
-.tab.active { background: rgba(96,165,250,0.1); color: white; border-bottom: 2px solid #60a5fa; }
+.tab:hover { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.8); }
+.tab.active { background: rgba(96,165,250,0.08); color: white; }
+.tab.active::after {
+  content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 1.5px;
+  background: #60a5fa; box-shadow: 0 0 8px rgba(96,165,250,0.5);
+}
 .tab-name { max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
 .tab-close {
   background: none; border: none; color: rgba(255,255,255,0.2);

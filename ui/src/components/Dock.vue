@@ -36,32 +36,47 @@ const open = (id: string) => {
     style="z-index: 2147483630"
   >
     <div
-      class="pointer-events-auto flex items-end gap-2 px-2 py-2 rounded-3xl border"
+      class="pointer-events-auto flex items-end gap-2.5 px-2.5 py-2.5 rounded-[24px] border"
       style="
-        background: rgba(18,18,22,0.52);
-        backdrop-filter: blur(40px) saturate(160%);
-        -webkit-backdrop-filter: blur(40px) saturate(160%);
-        border-color: rgba(255,255,255,0.13);
-        box-shadow: 0 12px 48px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.18);
+        background: rgba(18,18,22,0.4);
+        backdrop-filter: blur(40px) saturate(180%);
+        -webkit-backdrop-filter: blur(40px) saturate(180%);
+        border-color: rgba(255,255,255,0.1);
+        box-shadow: 0 20px 50px rgba(0,0,0,0.5), inset 0 0.5px 0 rgba(255,255,255,0.15);
       "
     >
       <button
         v-for="app in APPS" :key="app.id"
         @click="open(app.id)"
         :title="app.label"
-        class="relative w-12 h-12 rounded-[14px] flex items-center justify-center cursor-pointer transition-[transform,margin] duration-200 origin-bottom select-none"
-        style="box-shadow: 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.15)"
+        class="group relative w-11 h-11 rounded-[12px] flex items-center justify-center cursor-pointer transition-[transform,margin,background-color] duration-200 ease-[var(--ease-out)] origin-bottom select-none active:scale-95"
+        style="box-shadow: 0 4px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1)"
         :style="{ background: app.bg }"
-        @mouseenter="(e) => { (e.currentTarget as HTMLElement).style.transform='scale(1.3) translateY(-8px)'; (e.currentTarget as HTMLElement).style.margin='0 8px' }"
-        @mouseleave="(e) => { (e.currentTarget as HTMLElement).style.transform=''; (e.currentTarget as HTMLElement).style.margin='' }"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-          class="drop-shadow-sm" v-html="app.path"></svg>
-        <!-- Running dot -->
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"
+          class="drop-shadow-md transition-transform duration-200 group-hover:scale-110" v-html="app.path"></svg>
+        
+        <!-- Running indicator -->
         <div v-if="hasWindow(app.id)"
-          class="absolute w-1 h-1 rounded-full bg-white/70"
-          style="bottom:-5px;left:50%;transform:translateX(-50%)"></div>
+          class="absolute -bottom-1.5 w-1 h-1 rounded-full bg-white transition-opacity duration-200"
+          style="left:50%; transform:translateX(-50%); box-shadow: 0 0 8px rgba(255,255,255,0.8)">
+        </div>
+        
+        <!-- Tooltip (simulation) -->
+        <div class="absolute -top-12 left-1/2 -translate-x-1/2 px-2 py-1 bg-black/80 backdrop-blur-md border border-white/10 rounded-md text-[11px] text-white opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none whitespace-nowrap">
+          {{ app.label }}
+        </div>
       </button>
     </div>
   </div>
+
+<style scoped>
+button {
+  transition: transform 0.25s var(--ease-out), margin 0.25s var(--ease-out);
+}
+button:hover {
+  transform: scale(1.25) translateY(-8px);
+  margin: 0 6px;
+}
+</style>
 </template>

@@ -244,17 +244,6 @@ onUnmounted(() => {
 
 <style>
 /* ── Samsung emoji font ─────────────────────────────────────────────────────── */
-@font-face {
-  font-family: 'SamsungOneUI';
-  src: url('/fonts/SamsungOneUI.ttf') format('truetype');
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'JetBrains Mono Nerd Font';
-  src: url('/fonts/JetBrainsMonoNerdFont.ttf') format('truetype');
-  font-display: swap;
-}
 
 *,
 *::before,
@@ -262,14 +251,7 @@ onUnmounted(() => {
   box-sizing: border-box;
 }
 
-body {
-  margin: 0;
-  overflow: hidden;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Segoe UI", sans-serif;
-  -webkit-font-smoothing: antialiased;
-}
-
-/* Emoji elements use Samsung font first */
+/* Emoji elements use Samsung font first via global.css */
 .emoji,
 [data-emoji] {
   font-family: 'SamsungOneUI', 'SamsungColorEmoji', 'Noto Color Emoji', emoji;
@@ -278,9 +260,8 @@ body {
 @keyframes winEnter {
   from {
     opacity: 0;
-    transform: scale(0.94) translateY(6px);
+    transform: scale(0.96) translateY(10px);
   }
-
   to {
     opacity: 1;
     transform: scale(1) translateY(0);
@@ -290,18 +271,21 @@ body {
 @keyframes popIn {
   from {
     opacity: 0;
-    transform: scale(0.88);
+    transform: scale(0.95);
   }
-
   to {
     opacity: 1;
     transform: scale(1);
   }
 }
 
+::selection {
+  background: rgba(0, 122, 255, 0.3);
+}
+
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -309,12 +293,19 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.18);
-  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  transition: background 0.2s var(--ease-out);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Base button active state */
+button:active {
+  transform: scale(0.97);
+  transition: transform 150ms var(--ease-out);
 }
 
 /* xterm overrides */

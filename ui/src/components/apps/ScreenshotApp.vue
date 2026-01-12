@@ -165,7 +165,7 @@ const openFileManager = () => {
         <select 
           :value="s.display" 
           @change="(e) => selectDisplay((e.target as HTMLSelectElement).value)"
-          class="bg-white/10 hover:bg-white/15 px-3 py-1.5 rounded-md outline-none border border-transparent focus:border-blue-500 transition-colors cursor-pointer"
+          class="bg-white/10 hover:bg-white/15 px-3 py-1.5 rounded-md outline-none border border-white/5 focus:border-blue-500/50 transition-all duration-200 var(--ease-out) cursor-pointer font-medium text-[13px]"
         >
           <option v-for="d in displays" :key="d.name" :value="d.name" class="bg-black text-white">
             {{ d.name }} - {{ d.description }}
@@ -179,7 +179,7 @@ const openFileManager = () => {
           @click="openFileManager"
           :disabled="!s.display"
           title="Open in File Manager"
-          class="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/15 disabled:opacity-50 disabled:cursor-not-allowed rounded-md transition-colors text-[13px] font-medium"
+          class="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/15 disabled:opacity-30 disabled:cursor-not-allowed rounded-md transition-all duration-200 var(--ease-out) active:scale-95 text-[13px] font-medium border border-white/5"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
@@ -190,7 +190,7 @@ const openFileManager = () => {
         <button 
           @click="takeScreenshot"
           :disabled="!s.display"
-          class="flex items-center gap-2 px-4 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-md transition-colors font-medium shadow-sm"
+          class="flex items-center gap-2 px-4 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-30 disabled:cursor-not-allowed rounded-md transition-all duration-200 var(--ease-out) active:scale-95 font-medium shadow-[0_4px_12px_rgba(37,99,235,0.3)]"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -215,17 +215,17 @@ const openFileManager = () => {
           v-for="f in files" 
           :key="f.path"
           @click="openImage(f.path)"
-          class="group relative aspect-video bg-black/40 rounded-lg overflow-hidden border border-white/5 hover:border-white/20 transition-all cursor-pointer shadow-md"
+          class="group relative aspect-video bg-black/40 rounded-xl overflow-hidden border border-white/5 hover:border-white/20 transition-all duration-300 var(--ease-out) cursor-pointer shadow-lg active:scale-[0.98]"
         >
           <img 
             :src="`/api/files/download?path=${encodeURIComponent(f.path)}&_=${Date.now()}`" 
-            class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+            class="w-full h-full object-cover transition-transform duration-500 var(--ease-out) group-hover:scale-105"
             loading="lazy"
           />
-          <div class="absolute inset-0 bg-linear-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-            <div class="absolute bottom-2 left-2 right-2 flex justify-between items-center text-[12px]">
-              <span class="text-white font-medium truncate drop-shadow-md">{{ f.name }}</span>
-              <span class="text-white/70">{{ formatTime(f.modified) }}</span>
+          <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 var(--ease-out)">
+            <div class="absolute bottom-3 left-3 right-3 flex justify-between items-center text-[11px]">
+              <span class="text-white font-bold truncate drop-shadow-lg">{{ f.name }}</span>
+              <span class="text-white/60 font-medium">{{ formatTime(f.modified) }}</span>
             </div>
           </div>
         </div>
@@ -265,12 +265,15 @@ const openFileManager = () => {
 </template>
 
 <style scoped>
-.fade-enter-active,
+.fade-enter-active {
+  transition: opacity 250ms var(--ease-out), transform 300ms var(--ease-out);
+}
 .fade-leave-active {
-  transition: opacity 0.2s ease;
+  transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-out);
 }
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+  transform: scale(0.96) translateY(20px);
 }
 </style>
