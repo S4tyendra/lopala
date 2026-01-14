@@ -25,7 +25,7 @@ const props = defineProps<{ clock: string; activeApp: string }>()
           <path d="M15.2 10.5c-.1-2.5 2-3.7 2.1-3.8-1.2-1.7-3-1.9-3.6-2-.8-.1-2.1.5-2.8.5-.8 0-1.8-.5-2.7-.5-1.2 0-2.4.7-3 1.8-1.3 2.3-.3 5.7 1 7.6.6.9 1.3 1.9 2.3 1.9.9 0 1.3-.6 2.4-.6 1.1 0 1.4.6 2.4.6 1 0 1.6-1 2.2-1.9.8-1.1 1.1-2.2 1.1-2.2-.1-.1-1.4-.5-1.4-2.4zM11.6 3.4c.5-.6.8-1.4.7-2.2-.7 0-1.6.3-2.1.9-.4.5-.8 1.3-.7 2.1.8.1 1.6-.2 2.1-.8z"/>
         </svg>
       </div>
-      <div class="font-bold tracking-tight cursor-default opacity-90 transition-all duration-250 ease-[var(--ease-out)]">
+      <div class="font-bold tracking-tight cursor-default opacity-90 transition-all duration-200 ease-out">
         {{ activeApp }}
       </div>
     </div>
@@ -36,7 +36,7 @@ const props = defineProps<{ clock: string; activeApp: string }>()
         v-for="i in workspaceCount" :key="i"
         @click="currentWorkspace = i - 1"
         :class="currentWorkspace === i - 1 ? 'w-2.5 bg-white shadow-[0_0_8px_rgba(255,255,255,0.5)]' : 'w-2 bg-white/20'"
-        class="h-2 rounded-full cursor-pointer transition-all duration-250 ease-[var(--ease-out)] hover:bg-white/40 active:scale-90"
+        class="h-2 rounded-full cursor-pointer transition-all duration-200 ease-out hover:bg-white/40 active:scale-90"
       />
       <button
         v-if="workspaceCount < 10"

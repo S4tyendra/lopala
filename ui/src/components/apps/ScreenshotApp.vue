@@ -222,7 +222,8 @@ const openFileManager = () => {
             class="w-full h-full object-cover transition-transform duration-500 var(--ease-out) group-hover:scale-105"
             loading="lazy"
           />
-          <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 var(--ease-out)">
+          <div class="absolute inset-0 bg-linear-to-t from-black/60 to-transparent pointer-events-none" />
+          <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 var(--ease-out)">
             <div class="absolute bottom-3 left-3 right-3 flex justify-between items-center text-[11px]">
               <span class="text-white font-bold truncate drop-shadow-lg">{{ f.name }}</span>
               <span class="text-white/60 font-medium">{{ formatTime(f.modified) }}</span>

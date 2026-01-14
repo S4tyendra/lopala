@@ -52,6 +52,7 @@ export function winScreenRect(win: AppWindow) {
 }
 
 export function broadcastWin(win: AppWindow) {
+  if (win.local) return
   wsSend({ type: 'UpdateWindow', window: win })
 }
 
@@ -63,10 +64,15 @@ export function focusWindow(id: string) {
   if (win.z === maxZ && maxZ === zTop) return  // already on top, no-op
   zTop = maxZ
   win.z = nextZ()
-  broadcastWin(win)
+  if (!win.local) broadcastWin(win)
 }
 
 export function closeWindow(id: string) {
+  const win = windows.value[id]
+  if (win?.local) {
+    delete windows.value[id]
+    return
+  }
   wsSend({ type: 'CloseWindow', id })
 }
 
@@ -91,8 +97,8 @@ export function spawnWindow(app: string, extra: Partial<AppWindow> = {}): string
   const id = Math.random().toString(36).substring(7)
 
   // Default logical sizes
-  const logW = app === 'messages' ? 440 : app === 'canvas' ? 640 : app === 'editor' ? 960 : app === 'taskmanager' ? 800 : 700
-  const logH = app === 'messages' ? 520 : app === 'editor' ? 580 : app === 'taskmanager' ? 540 : 460
+  const logW = app === 'messages' ? 440 : app === 'canvas' ? 640 : app === 'editor' ? 960 : app === 'taskmanager' ? 800 : app === 'help' ? 500 : 700
+  const logH = app === 'messages' ? 520 : app === 'editor' ? 580 : app === 'taskmanager' ? 540 : app === 'help' ? 600 : 460
 
   // Stagger in logical space
   const offsetX = Math.round((80 + (count * 28) % 200) * LOGICAL_W / window.innerWidth)
@@ -107,7 +113,9 @@ export function spawnWindow(app: string, extra: Partial<AppWindow> = {}): string
     ...extra,
   }
 
-  wsSend({ type: 'SpawnWindow', window: win })
+  if (!win.local) wsSend({ type: 'SpawnWindow', window: win })
+  else windows.value[id] = win
+  
   return id
 }
 

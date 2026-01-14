@@ -12,6 +12,7 @@ export interface AppWindow {
   minimized: boolean
   maximized: boolean
   title: string
+  local?: boolean
   channel?: string
   canvasId?: string
   // store pre-max state inline

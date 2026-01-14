@@ -37,5 +37,10 @@ As of building this, there are no known CVEs for the libraries and dependencies 
 
 ## License
 
-**Do whatever, I don't care. I don't guarantee anything.** 
-(Provided "As Is" without warranty of any kind).
+MIT — **Do whatever you like.** I don't care, and I can't guarantee anything. 
+
+See the [LICENSE](LICENSE) file for more information. (Provided "AS IS" without warranty of any kind).
+
+### 🤍 Support the Project
+Lopala is MIT licensed, but if you use the code, concept, or design engineering tokens in your own project, a **Star on GitHub** is the best way to say thanks. 
+[⭐ Star github.com/s4tyendra/lopala](https://github.com/s4tyendra/lopala)

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref, onMounted, onUnmounted } from 'vue'
 import { windows } from '../composables/useWs'
 import { spawnWindow } from '../composables/useWindows'
 
@@ -27,56 +28,87 @@ const open = (id: string) => {
     spawnWindow(id, { title: id[0].toUpperCase() + id.slice(1) })
   }
 }
+
+// ── Magnification Logic ──────────────────────────────────────────────────────
+const dockRef = ref<HTMLElement | null>(null)
+const mouseX = ref(-1000)
+const mouseY = ref(-1000)
+
+const onMouseMove = (e: MouseEvent) => {
+  mouseX.value = e.clientX
+  mouseY.value = e.clientY
+}
+onMounted(() => window.addEventListener('mousemove', onMouseMove))
+onUnmounted(() => window.removeEventListener('mousemove', onMouseMove))
+
+function getScale(appId: string) {
+  const el = document.getElementById(`dock-item-${appId}`)
+  if (!el || !dockRef.value) return 1
+  
+  const rect = el.getBoundingClientRect()
+  const centerX = rect.left + rect.width / 2
+  const centerY = rect.top + rect.height / 2
+  
+  const dist = Math.sqrt((mouseX.value - centerX)**2 + (mouseY.value - centerY)**2)
+  const maxDist = 140
+  const maxScale = 1.6
+  
+  if (dist > maxDist) return 1
+  const scale = 1 + (maxScale - 1) * (1 - dist / maxDist)
+  return scale
+}
+
+const currentScales = ref<Record<string, number>>({})
+let rafId: number
+const updateScales = () => {
+  APPS.forEach(a => currentScales.value[a.id] = getScale(a.id))
+  rafId = requestAnimationFrame(updateScales)
+}
+onMounted(() => rafId = requestAnimationFrame(updateScales))
+onUnmounted(() => cancelAnimationFrame(rafId))
+
 </script>
 
 <template>
-  <!-- Dock sits above everything except the menubar cursor layer -->
-  <div
-    class="fixed bottom-3 left-0 right-0 flex justify-center pointer-events-none"
-    style="z-index: 2147483630"
-  >
-    <div
-      class="pointer-events-auto flex items-end gap-2.5 px-2.5 py-2.5 rounded-[24px] border"
-      style="
-        background: rgba(18,18,22,0.4);
-        backdrop-filter: blur(40px) saturate(180%);
-        -webkit-backdrop-filter: blur(40px) saturate(180%);
-        border-color: rgba(255,255,255,0.1);
-        box-shadow: 0 20px 50px rgba(0,0,0,0.5), inset 0 0.5px 0 rgba(255,255,255,0.15);
-      "
-    >
-      <button
-        v-for="app in APPS" :key="app.id"
+  <div class="fixed bottom-3 left-0 right-0 flex justify-center pointer-events-none" style="z-index: 2147483630">
+    <div ref="dockRef"
+      class="pointer-events-auto flex items-end gap-1 px-3 py-2.5 rounded-[24px] border"
+      style="background:rgba(18,18,22,0.4); backdrop-filter:blur(40px) saturate(180%); -webkit-backdrop-filter:blur(40px) saturate(180%); border-color:rgba(255,255,255,0.12); box-shadow:0 20px 50px rgba(0,0,0,0.5), inset 0 0.5px 0 rgba(255,255,255,0.15);">
+      
+      <button v-for="app in APPS" :key="app.id" :id="`dock-item-${app.id}`"
         @click="open(app.id)"
-        :title="app.label"
-        class="group relative w-11 h-11 rounded-[12px] flex items-center justify-center cursor-pointer transition-[transform,margin,background-color] duration-200 ease-[var(--ease-out)] origin-bottom select-none active:scale-95"
-        style="box-shadow: 0 4px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1)"
-        :style="{ background: app.bg }"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"
-          class="drop-shadow-md transition-transform duration-200 group-hover:scale-110" v-html="app.path"></svg>
+        class="group relative flex items-center justify-center cursor-pointer select-none active:scale-90 transition-[width,height,margin]"
+        :style="{
+          width: `${44 * (currentScales[app.id] || 1)}px`,
+          height: `${44 * (currentScales[app.id] || 1)}px`,
+          margin: `0 ${2 * (currentScales[app.id] || 1)}px`,
+          marginBottom: `${10 * ((currentScales[app.id] || 1) - 1)}px`
+        }">
         
+        <div class="w-full h-full rounded-[12px] flex items-center justify-center transition-colors duration-200"
+          :style="{ background: app.bg, boxShadow: '0 4px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1)' }">
+          <svg xmlns="http://www.w3.org/2000/svg" width="50%" height="50%" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+            class="drop-shadow-md" v-html="app.path"></svg>
+        </div>
+
         <!-- Running indicator -->
         <div v-if="hasWindow(app.id)"
-          class="absolute -bottom-1.5 w-1 h-1 rounded-full bg-white transition-opacity duration-200"
-          style="left:50%; transform:translateX(-50%); box-shadow: 0 0 8px rgba(255,255,255,0.8)">
+          class="absolute -bottom-1.5 w-1 h-1 rounded-full bg-white/90"
+          style="left:50%; transform:translateX(-50%); box-shadow:0 0 8px rgba(255,255,255,0.8)">
         </div>
-        
-        <!-- Tooltip (simulation) -->
-        <div class="absolute -top-12 left-1/2 -translate-x-1/2 px-2 py-1 bg-black/80 backdrop-blur-md border border-white/10 rounded-md text-[11px] text-white opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none whitespace-nowrap">
+
+        <!-- Tooltip -->
+        <div class="absolute -top-12 left-1/2 -translate-x-1/2 px-2.5 py-1.5 bg-black/80 backdrop-blur-md border border-white/10 rounded-lg text-[12px] font-bold text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap shadow-xl">
           {{ app.label }}
         </div>
       </button>
     </div>
   </div>
+</template>
 
 <style scoped>
 button {
-  transition: transform 0.25s var(--ease-out), margin 0.25s var(--ease-out);
-}
-button:hover {
-  transform: scale(1.25) translateY(-8px);
-  margin: 0 6px;
+  transition: width 0.1s ease-out, height 0.1s ease-out, margin 0.1s ease-out;
+  will-change: width, height, margin;
 }
 </style>
-</template>

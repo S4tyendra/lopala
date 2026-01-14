@@ -12,12 +12,13 @@ const selectedIdx = ref(0)
 
 // ─── App catalogue ────────────────────────────────────────────────────────────
 const APPS = [
-  { id: 'terminal',   label: 'Terminal',    icon: '>_',  bg: '#1a6fdf' },
-  { id: 'files',      label: 'File Manager',icon: '📁',  bg: '#e8a020' },
-  { id: 'messages',   label: 'Messages',    icon: '💬',  bg: '#28a745' },
-  { id: 'canvas',     label: 'Canvas',      icon: '🎨',  bg: '#7c3aed' },
-  { id: 'screenshot', label: 'Screenshot',  icon: '📸',  bg: '#eab308' },
-  { id: 'screenview', label: 'Screen View', icon: '📺',  bg: '#0e7490' },
+  { id: 'terminal',   label: 'Terminal',    icon: '<polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/>',  bg: '#1a1a1a' },
+  { id: 'files',      label: 'Finder',      icon: '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>',  bg: '#1a6ef5' },
+  { id: 'messages',   label: 'Messages',    icon: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',  bg: '#28a745' },
+  { id: 'canvas',     label: 'Canvas',      icon: '<path d="M12 21a9 9 0 0 1-9-9c0-5 4-9 9-9 5 0 9 4 9 9 0 2-1 3-3 3h-1c-1 0-2 1-2 2v1c0 1-1 2-2 2zm-5-9A1.5 1.5 0 1 1 5.5 12 1.5 1.5 0 0 1 7 12zm9 0a1.5 1.5 0 1 1-1.5-1.5A1.5 1.5 0 0 1 16 12zm-4-4a1.5 1.5 0 1 1-1.5-1.5A1.5 1.5 0 0 1 12 8z"/>',  bg: '#7c3aed' },
+  { id: 'screenshot', label: 'Screenshot',  icon: '<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline>',  bg: '#eab308' },
+  { id: 'screenview', label: 'Screen View', icon: '<rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line><circle cx="12" cy="10" r="3"></circle>',  bg: '#0e7490' },
+  { id: 'taskmanager', label: 'Task Manager', icon: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>', bg: '#dc2626' },
 ]
 
 // ─── Search results ───────────────────────────────────────────────────────────
@@ -250,9 +251,10 @@ onUnmounted(() => {
                   @click="spawnApp(item.id)"
                   class="w-full flex items-center gap-3 px-5 py-2.5 text-left transition-colors duration-75 text-[13px]"
                   :style="selectedIdx === gi ? 'background:rgba(255,255,255,0.12)' : ''">
-                  <span class="w-7 h-7 rounded-lg flex items-center justify-center flex-none text-[14px]"
+                  <span class="w-7 h-7 rounded-lg flex items-center justify-center flex-none"
                     :style="`background:${item.bg}33; border:1px solid ${item.bg}55`">
-                    {{ item.icon }}
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                      :style="`color:${item.bg}`" v-html="item.icon"></svg>
                   </span>
                   <span class="text-white font-medium">{{ item.label }}</span>
                   <span class="ml-auto text-[11px] opacity-30">Open app</span>
@@ -268,9 +270,9 @@ onUnmounted(() => {
                   @click="openChannel(ch.id, ch.name)"
                   class="w-full flex items-center gap-3 px-5 py-2.5 text-left transition-colors duration-75 text-[13px]"
                   :style="selectedIdx === filteredApps.length + ci ? 'background:rgba(255,255,255,0.12)' : ''">
-                  <span class="w-7 h-7 rounded-lg flex items-center justify-center flex-none text-[12px]"
+                  <span class="w-7 h-7 rounded-lg flex items-center justify-center flex-none"
                     style="background:rgba(40,167,69,0.2); border:1px solid rgba(40,167,69,0.4)">
-                    #
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#28a745" stroke-width="3"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                   </span>
                   <span class="text-white font-medium">{{ ch.name }}</span>
                   <span class="ml-auto text-[11px] opacity-30">Switch</span>
@@ -286,9 +288,9 @@ onUnmounted(() => {
                   @click="openFile(f.path)"
                   class="w-full flex items-center gap-3 px-5 py-2.5 text-left transition-colors duration-75 text-[13px]"
                   :style="selectedIdx === filteredApps.length + filteredChannels.length + fi ? 'background:rgba(255,255,255,0.12)' : ''">
-                  <span class="w-7 h-7 rounded-lg flex items-center justify-center flex-none text-[12px]"
+                  <span class="w-7 h-7 rounded-lg flex items-center justify-center flex-none"
                     style="background:rgba(99,102,241,0.2); border:1px solid rgba(99,102,241,0.35)">
-                    📄
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#6366f1" stroke-width="2.5"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
                   </span>
                   <div class="flex-1 min-w-0">
                     <div class="text-white font-medium truncate">{{ f.name }}</div>

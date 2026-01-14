@@ -243,24 +243,33 @@ const previewEntry = computed(() => {
       </div>
 
       <!-- Clipboard indicator -->
-      <div v-if="s.clipboard" class="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded shadow-sm" style="background:rgba(251,146,60,0.15);color:#fb923c">
-        <span>{{ s.clipboard.op === 'copy' ? '📋' : '✂️' }}</span>
-        <span>{{ s.clipboard.paths.length }} item{{ s.clipboard.paths.length > 1 ? 's' : '' }}</span>
-        <button @click.stop="s.clipboard = null; broadcastFileState()" class="opacity-60 hover:opacity-100 ml-1">✕</button>
+      <div v-if="s.clipboard" class="flex items-center gap-1.5 text-[10px] px-2.5 py-1 rounded-full shadow-lg border border-[#fb923c]/30" style="background:rgba(251,146,60,0.15);color:#fb923c">
+        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+        <span class="font-bold tracking-tight">{{ s.clipboard.paths.length }} item{{ s.clipboard.paths.length > 1 ? 's' : '' }}</span>
+        <button @click.stop="s.clipboard = null; broadcastFileState()" class="opacity-60 hover:opacity-100 ml-1 transition-opacity">
+          <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
       </div>
 
       <!-- View toggle -->
       <div class="flex gap-1">
-        <button @click.stop="s.viewMode = 'grid'" :style="s.viewMode==='grid'?'color:white;background:rgba(255,255,255,0.12)':'color:rgba(255,255,255,0.3)'" class="px-2 py-1 rounded text-[12px] transition-[background] duration-100">⊞</button>
-        <button @click.stop="s.viewMode = 'list'" :style="s.viewMode==='list'?'color:white;background:rgba(255,255,255,0.12)':'color:rgba(255,255,255,0.3)'" class="px-2 py-1 rounded text-[12px] transition-[background] duration-100">☰</button>
+        <button @click.stop="s.viewMode = 'grid'" :style="s.viewMode==='grid'?'color:white;background:rgba(255,255,255,0.12)':'color:rgba(255,255,255,0.3)'" class="p-1.5 rounded transition-all duration-100 active:scale-95">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        </button>
+        <button @click.stop="s.viewMode = 'list'" :style="s.viewMode==='list'?'color:white;background:rgba(255,255,255,0.12)':'color:rgba(255,255,255,0.3)'" class="p-1.5 rounded transition-all duration-100 active:scale-95">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
         <!-- Upload button -->
         <button
           @click.stop="showUploader = true"
           title="Upload files"
-          class="px-2 py-1 rounded text-[12px] transition-all duration-100 flex items-center gap-1"
-          style="color:rgba(255,255,255,0.55);border:1px solid rgba(255,255,255,0.1)"
+          class="px-2.5 py-1 rounded-md text-[11px] font-bold tracking-tight transition-all duration-100 flex items-center gap-1.5 active:scale-95"
+          style="color:rgba(255,255,255,0.65);border:1px solid rgba(255,255,255,0.12)"
           :style="showUploader ? 'color:white;background:rgba(96,165,250,0.18);border-color:rgba(96,165,250,0.4)' : ''"
-        >⬆ Upload</button>
+        >
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Upload
+        </button>
       </div>
     </div>
 
@@ -285,11 +294,11 @@ const previewEntry = computed(() => {
             :style="s.selected.has(entry.path)
               ? 'background:rgba(96,165,250,0.2);outline:1.5px solid rgba(96,165,250,0.5);'
               : 'background:transparent'"
-            class="flex flex-col items-center gap-1 p-2 rounded-xl cursor-pointer transition-all duration-200 ease-[var(--ease-out)] select-none active:scale-95"
+            class="flex flex-col items-center gap-1 p-2 rounded-xl cursor-pointer transition-all duration-200 ease-out select-none active:scale-95"
             :class="s.selected.has(entry.path) ? '' : 'hover:bg-white/5'">
 
             <!-- Rename mode -->
-            <span v-if="s.renaming?.path !== entry.path" class="text-2xl leading-none">{{ fileIcon(entry) }}</span>
+            <span v-if="s.renaming?.path !== entry.path" class="w-10 h-10 leading-none flex items-center justify-center text-white/70" v-html="fileIcon(entry)"></span>
             <input v-else
               id="rename-input"
               :value="s.renaming.name"
@@ -321,10 +330,10 @@ const previewEntry = computed(() => {
             :style="s.selected.has(entry.path)
               ? 'background:rgba(96,165,250,0.18)'
               : ''"
-            class="flex items-center gap-3 px-3 py-1.5 rounded-lg cursor-pointer transition-all duration-150 ease-[var(--ease-out)] select-none active:scale-[0.99]"
+            class="flex items-center gap-3 px-3 py-1.5 rounded-lg cursor-pointer transition-all duration-150 ease-out select-none active:scale-[0.99]"
             :class="s.selected.has(entry.path) ? '' : 'hover:bg-white/5'">
 
-            <span class="text-sm leading-none shrink-0">{{ fileIcon(entry) }}</span>
+            <span class="w-5 h-5 flex items-center justify-center shrink-0 text-white/50" v-html="fileIcon(entry)"></span>
 
             <span v-if="s.renaming?.path !== entry.path" class="flex-1 text-[12px] truncate" style="color:rgba(255,255,255,0.85)">{{ entry.name }}</span>
             <input v-else
@@ -351,8 +360,8 @@ const previewEntry = computed(() => {
           </div>
         </div>
         <div class="flex-1 overflow-auto bg-[#0a0a0c]">
-          <div v-if="s.preview.content === '__no_preview__'" class="flex flex-col items-center justify-center h-full gap-3" style="color:rgba(255,255,255,0.2)">
-            <span v-if="previewEntry" class="text-4xl">{{ fileIcon(previewEntry) }}</span>
+          <div v-if="s.preview.content === '__no_preview__'" class="flex flex-col items-center justify-center h-full gap-4 text-white/20">
+            <span v-if="previewEntry" class="w-16 h-16 opacity-40" v-html="fileIcon(previewEntry)"></span>
             <span class="text-[12px]">No preview available</span>
           </div>
           <template v-else-if="s.preview.content === '__embed__' && previewEntry">
@@ -383,35 +392,60 @@ const previewEntry = computed(() => {
 
         <template v-if="s.contextMenu.entry">
           <button @click="openEntry(s.contextMenu.entry)" class="ctx-item">
-            <span>{{ s.contextMenu.entry.is_dir ? '📂' : '👁️' }}</span>
-            {{ s.contextMenu.entry.is_dir ? 'Open' : 'Preview' }}
+            <span class="opacity-60" v-html="fileIcon(s.contextMenu.entry)"></span>
+            {{ s.contextMenu.entry.is_dir ? 'Open Folder' : 'View Content' }}
           </button>
           <button @click="editorEntry" class="ctx-item">
-            <span>📝</span>Open in Editor
+            <span class="opacity-60"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></span>
+            Open in Code Editor
           </button>
           <div class="ctx-divider"/>
-          <button @click="copy" class="ctx-item"><span>📋</span>Copy</button>
-          <button @click="cut" class="ctx-item"><span>✂️</span>Cut</button>
+          <button @click="copy" class="ctx-item">
+            <span class="opacity-60"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></span>
+            Copy
+          </button>
+          <button @click="cut" class="ctx-item">
+            <span class="opacity-60"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><polyline points="8.12 8.12 12 12"/></svg></span>
+            Cut
+          </button>
         </template>
 
         <button v-if="s.clipboard" @click="paste" class="ctx-item">
-          <span>📥</span>Paste {{ s.clipboard.paths.length }} item{{ s.clipboard.paths.length > 1 ? 's' : '' }}
+          <span class="opacity-60 text-orange-400"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
+          Paste {{ s.clipboard.paths.length }} item{{ s.clipboard.paths.length > 1 ? 's' : '' }}
         </button>
 
         <template v-if="s.contextMenu.entry">
           <div class="ctx-divider"/>
-          <button @click="startRename" class="ctx-item"><span>✏️</span>Rename</button>
-          <button @click="s.contextMenu?.entry && downloadEntry(s.contextMenu.entry.path)" class="ctx-item"><span>⬇️</span>Download</button>
+          <button @click="startRename" class="ctx-item">
+            <span class="opacity-60"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></span>
+            Rename Item
+          </button>
+          <button @click="s.contextMenu?.entry && downloadEntry(s.contextMenu.entry.path)" class="ctx-item">
+            <span class="opacity-60"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span>
+            Download File
+          </button>
           <div class="ctx-divider"/>
-          <button @click="doDelete" class="ctx-item ctx-danger"><span>🗑️</span>Delete</button>
+          <button @click="doDelete" class="ctx-item ctx-danger">
+            <span class="opacity-60"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></span>
+            Move to Trash
+          </button>
         </template>
 
         <template v-else>
-          <button v-if="s.clipboard" @click="paste" class="ctx-item"><span>📥</span>Paste</button>
-          <div class="ctx-divider"/>
-          <button @click="editorHere" class="ctx-item"><span>📝</span>Open Editor in Folder</button>
-          <button @click="terminalHere" class="ctx-item"><span>⌨️</span>Open Terminal Here</button>
-          <button @click="loadFiles(s.path)" class="ctx-item"><span>🔄</span>Refresh</button>
+          <div class="ctx-divider" v-if="s.clipboard"/>
+          <button @click="editorHere" class="ctx-item">
+             <span class="opacity-60"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></span>
+             Open Editor in Folder
+          </button>
+          <button @click="terminalHere" class="ctx-item">
+             <span class="opacity-60"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg></span>
+             Open Terminal Here
+          </button>
+          <button @click="loadFiles(s.path)" class="ctx-item">
+             <span class="opacity-60"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></span>
+             Refresh Listing
+          </button>
         </template>
       </div>
     </Teleport>

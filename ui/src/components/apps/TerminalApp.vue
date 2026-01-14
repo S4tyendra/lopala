@@ -92,48 +92,81 @@ onUnmounted(() => {
   <div class="term-wrap">
     <div :id="`term-${winId}`" class="term-canvas" />
 
-    <!-- Copy toolbar -->
-    <div class="copy-bar">
-      <button @click="copySelection" class="copy-btn" title="Copy Selection (Ctrl+Shift+C)">📋 Sel</button>
-      <button @click="copyLastCommand" class="copy-btn" title="Copy Last Output">📝 Last</button>
-      <button @click="copyFullBuffer" class="copy-btn" title="Copy Full Buffer">📑 All</button>
-      <Transition name="fade">
-        <span v-if="showCopied" class="copied-badge">Copied!</span>
-      </Transition>
-    </div>
+    <teleport :to="`#actions-${winId}`">
+      <div class="flex items-center gap-1.5 px-2">
+        <button @click="copySelection"
+          class="pro-btn flex items-center justify-center w-7 h-7 rounded-md transition-all active:scale-90 opacity-40 hover:opacity-100 hover:bg-white/10"
+          title="Copy selection [Ctrl+Shift+C]">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+            <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
+          </svg>
+        </button>
+        <button @click="copyLastCommand"
+          class="pro-btn flex items-center justify-center w-7 h-7 rounded-md transition-all active:scale-90 opacity-40 hover:opacity-100 hover:bg-white/10"
+          title="Copy last output">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="16" y1="13" x2="8" y2="13" />
+            <line x1="16" y1="17" x2="8" y2="17" />
+            <polyline points="10 9 9 9 8 9" />
+          </svg>
+        </button>
+        <button @click="copyFullBuffer"
+          class="pro-btn flex items-center justify-center w-7 h-7 rounded-md transition-all active:scale-90 opacity-40 hover:opacity-100 hover:bg-white/10"
+          title="Copy all text">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"
+            stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+          </svg>
+        </button>
+        <Transition name="fade">
+          <span v-if="showCopied"
+            class="text-[9px] font-bold uppercase tracking-widest text-[#34d399] bg-[#34d399]/10 px-2 py-0.5 rounded-full border border-[#34d399]/20">Copied</span>
+        </Transition>
+      </div>
+    </teleport>
   </div>
 </template>
 
 <style scoped>
 .term-wrap {
-  position: absolute; inset: 0; display: flex; flex-direction: column;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
   background: #0c0c0c;
 }
-.term-canvas { flex: 1; padding: 2px; min-height: 0; }
 
-.copy-bar {
-  display: flex; align-items: center; gap: 4px;
-  padding: 3px 6px; flex-shrink: 0;
-  background: rgba(0,0,0,0.4);
-  border-top: 1px solid rgba(255,255,255,0.06);
-}
-.copy-btn {
-  padding: 3px 10px; border-radius: 6px; font-size: 10px; font-weight: 500;
-  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06);
-  color: rgba(255,255,255,0.5); cursor: pointer; transition: all 150ms var(--ease-out);
-  font-family: inherit; white-space: nowrap;
-}
-.copy-btn:hover { background: rgba(255,255,255,0.08); color: white; border-color: rgba(255,255,255,0.12); }
-.copy-btn:active { transform: scale(0.96); }
-
-.copied-badge {
-  margin-left: auto; font-size: 10px; font-weight: 600; color: #34d399;
-  padding: 2px 10px; border-radius: 6px;
-  background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.2);
+.term-canvas {
+  flex: 1;
+  padding: 2px;
+  min-height: 0;
 }
 
-.fade-enter-active { transition: opacity 250ms var(--ease-out), transform 300ms var(--ease-out); }
-.fade-leave-active { transition: opacity 200ms var(--ease-out); }
-.fade-enter-from { opacity: 0; transform: translateY(4px) scale(0.95); }
-.fade-leave-to { opacity: 0; }
+.pro-btn {
+  cursor: pointer;
+  color: white;
+}
+
+
+.fade-enter-active {
+  transition: opacity 250ms var(--ease-out), transform 300ms var(--ease-out);
+}
+
+.fade-leave-active {
+  transition: opacity 200ms var(--ease-out);
+}
+
+.fade-enter-from {
+  opacity: 0;
+  transform: translateY(4px) scale(0.95);
+}
+
+.fade-leave-to {
+  opacity: 0;
+}
 </style>

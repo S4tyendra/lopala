@@ -14,6 +14,7 @@ import ScreenshotApp from './components/apps/ScreenshotApp.vue'
 import ScreenViewApp from './components/apps/ScreenViewApp.vue'
 import TaskmanagerApp from './components/apps/TaskmanagerApp.vue'
 import CodeEditorApp from './components/apps/CodeEditorApp.vue'
+import HelpApp from './components/apps/HelpApp.vue'
 import Notifications from './components/Notifications.vue'
 import SpotlightSearch from './components/SpotlightSearch.vue'
 
@@ -21,7 +22,10 @@ import {
   myId, myName, myColor, windows, users, chats,
   channels, currentWorkspace, workspaceCount, wsSend, connectWs, canvasHistory,
 } from './composables/useWs'
-import { visibleWindows, onDragMove, onDragEnd, focusWindow, nextZ, syncZTop, minimizedSlots } from './composables/useWindows'
+import { 
+  visibleWindows, onDragMove, onDragEnd, focusWindow, nextZ, syncZTop, minimizedSlots,
+  spawnWindow 
+} from './composables/useWindows'
 import { checkAndInitTerminals, writeToTerminal, disposeTerminal } from './composables/useTerminals'
 import { initFileState, loadFiles, applyRemoteFileState } from './composables/useFiles'
 import { drawStroke, clearCanvas, disposeCanvas, drawRemoteLine } from './composables/useCanvas'
@@ -37,7 +41,7 @@ const activeApp = ref('Finder')
 const APP_NAMES: Record<string, string> = {
   terminal: 'Terminal', files: 'Finder', messages: 'Messages',
   canvas: 'Canvas', screenshot: 'Screenshot', screenview: 'Screen View',
-  taskmanager: 'Task Manager', editor: 'Code Editor',
+  taskmanager: 'Task Manager', editor: 'Code Editor', help: 'Help',
 }
 
 // ─── WS Event Handler ─────────────────────────────────────────────────────────
@@ -92,6 +96,7 @@ const handleEvent = (msg: any) => {
       break
     case 'CloseWindow': {
       const w = windows.value[msg.id]
+      if (w?.local) return // ignore server close for local windows
       if (w?.app === 'terminal') disposeTerminal(msg.id)
       if (w?.app === 'canvas' && w.canvasId) disposeCanvas(w.canvasId)
       delete windows.value[msg.id]
@@ -162,7 +167,7 @@ const onKeyDown = (e: KeyboardEvent) => {
 watch(visibleWindows, (wins) => {
   if (!wins.length) { activeApp.value = 'Finder'; return }
   const top = wins[wins.length - 1]
-  activeApp.value = APP_NAMES[top?.app] ?? 'Finder'
+  activeApp.value = APP_NAMES[top?.app] ?? ''
 })
 
 // ─── Workspace change: re-init terminals ─────────────────────────────────────
@@ -192,7 +197,12 @@ onMounted(() => {
   window.addEventListener('app-login', () => {
     myName.value = (window as any).lopalaName || `user_${myId.value.substring(0, 4)}`
     connectWs(handleEvent, {
-      onOpen: () => notif.wsConnected(),
+      onOpen: () => {
+        notif.wsConnected()
+        // Spawn local help window by default if not already open
+        const hostHelp = Object.values(windows.value).some(w => w.app === 'help' && w.local)
+        if (!hostHelp) spawnWindow('help', { title: 'Help', local: true })
+      },
       onClose: () => notif.wsDisconnected(),
     })
   })
@@ -228,6 +238,7 @@ onUnmounted(() => {
         <ScreenViewApp v-else-if="win.app === 'screenview'" :win-id="win.id" />
         <TaskmanagerApp v-else-if="win.app === 'taskmanager'" :win-id="win.id" />
         <CodeEditorApp v-else-if="win.app === 'editor'" :win-id="win.id" />
+        <HelpApp v-else-if="win.app === 'help'" :win-id="win.id" />
       </WindowFrame>
     </div>
 
@@ -262,6 +273,7 @@ onUnmounted(() => {
     opacity: 0;
     transform: scale(0.96) translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: scale(1) translateY(0);
@@ -273,6 +285,7 @@ onUnmounted(() => {
     opacity: 0;
     transform: scale(0.95);
   }
+
   to {
     opacity: 1;
     transform: scale(1);
