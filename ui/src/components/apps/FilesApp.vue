@@ -5,7 +5,7 @@ import {
   loadFiles, openEntry, renameFile, deleteFiles, copyFiles, moveFiles,
   fileIcon, fileSizeHuman, formatDate,
 } from '../../composables/useFiles'
-import { spawnWindow, focusWindow } from '../../composables/useWindows'
+import { spawnWindow, focusWindow, nextZ } from '../../composables/useWindows'
 import { currentWorkspace, wsSend, windows } from '../../composables/useWs'
 import FileUploader from './FileUploader.vue'
 
@@ -78,6 +78,55 @@ onMounted(() => document.addEventListener('click', onDocClick, true))
 onUnmounted(() => document.removeEventListener('click', onDocClick, true))
 
 // ── Operations ────────────────────────────────────────────────────────────────
+const open = async (entry: any) => {
+  if (entry.is_dir) {
+    await loadFiles(entry.path)
+    return
+  }
+
+  const m = entry.mime
+  const match = m.match(/^(image\/|video\/|application\/pdf)/)
+  if (match) {
+    const type = m.startsWith('image/') ? 'image' : m.startsWith('video/') ? 'video' : 'pdf'
+    // Find existing Media Viewer window OR spawn new one
+    const existingId = Object.keys(windows.value).find(id => windows.value[id].app === 'media')
+    
+    if (existingId) {
+      const win = windows.value[existingId]
+      const media = [...(win.args?.media || [])]
+      const index = media.findIndex(m => m.path === entry.path)
+      
+      if (index === -1) {
+        media.push({ path: entry.path, name: entry.name, type })
+        wsSend({
+          type: 'UpdateWindow',
+          window: { 
+            ...win, 
+            args: { ...win.args, media, activeIndex: media.length - 1 },
+            z: nextZ()
+          }
+        })
+      } else {
+        wsSend({
+          type: 'UpdateWindow',
+          window: { 
+            ...win, 
+            args: { ...win.args, activeIndex: index },
+            z: nextZ()
+          }
+        })
+      }
+    } else {
+      spawnWindow('media', {
+        title: 'Media Viewer',
+        args: { media: [{ path: entry.path, name: entry.name, type }], activeIndex: 0 }
+      })
+    }
+  } else {
+    await openEntry(entry)
+  }
+}
+
 const copy = () => {
   if (!s.value) return
   s.value.clipboard = { op: 'copy', paths: selectedPaths.value }

@@ -39,7 +39,7 @@ function clampScreen(x: number, y: number, w: number, h: number) {
   const minVisible = 60
   return {
     x: Math.max(-(w - minVisible), Math.min(x, window.innerWidth - minVisible)),
-    y: Math.max(28, Math.min(y, window.innerHeight - 60)),
+    y: Math.max(0, Math.min(y, window.innerHeight - 60)),
     w: Math.max(240, Math.min(w, window.innerWidth)),
     h: Math.max(150, Math.min(h, window.innerHeight - 28 - 70)),
   }
@@ -83,11 +83,13 @@ export function toggleMaximize(win: AppWindow) {
     win.x = win._px ?? win.x; win.y = win._py ?? win.y
     win.w = win._pw ?? win.w; win.h = win._ph ?? win.h
   } else {
-    // Save current logical, set to full screen in logical coords
+    // Save current, then fill the window container (viewport minus menubar 28px and dock ~70px)
     win._px = win.x; win._py = win.y; win._pw = win.w; win._ph = win.h
     win.maximized = true
-    win.x = 0; win.y = Math.round(28 * LOGICAL_H / window.innerHeight)
-    win.w = LOGICAL_W; win.h = Math.round((window.innerHeight - 28 - 70) * LOGICAL_H / window.innerHeight)
+    win.x = 0
+    win.y = 0
+    win.w = LOGICAL_W
+    win.h = Math.round((window.innerHeight - 28 - 70) * LOGICAL_H / window.innerHeight)
   }
   broadcastWin(win)
 }

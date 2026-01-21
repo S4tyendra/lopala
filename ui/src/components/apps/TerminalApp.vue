@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
-import { initTerminal, getTerminal, writeToTerminal } from '../../composables/useTerminals'
+import { initTerminal, getTerminal } from '../../composables/useTerminals'
 
 const props = defineProps<{ winId: string }>()
 
@@ -13,7 +13,6 @@ function flashCopied() {
   copiedTimer = setTimeout(() => showCopied.value = false, 1500)
 }
 
-// ── Copy selection (Ctrl+Shift+C also bound here) ─────────────────────────────
 function copySelection() {
   const t = getTerminal(props.winId)
   if (!t) return
@@ -25,12 +24,9 @@ function copySelection() {
   }
 }
 
-// ── Copy full terminal buffer ─────────────────────────────────────────────────
 function copyFullBuffer() {
   const t = getTerminal(props.winId)
   if (!t) return
-  // Xterm.js doesn't expose the full scrollback easily via API,
-  // but we can select all then grab it
   t.term.selectAll()
   const text = t.term.getSelection()
   t.term.clearSelection()
@@ -40,12 +36,9 @@ function copyFullBuffer() {
   }
 }
 
-// ── Copy last command output ──────────────────────────────────────────────────
-function copyLastCommand() {
+function copyLastOutput() {
   const t = getTerminal(props.winId)
   if (!t) return
-  // Best-effort: grab the visible active buffer content
-  // xterm.js doesn't separate commands, so copy last ~50 lines
   const buf = t.term.buffer.active
   const lines: string[] = []
   const end = buf.cursorY + buf.baseY
@@ -54,7 +47,6 @@ function copyLastCommand() {
     const line = buf.getLine(i)
     if (line) lines.push(line.translateToString(true))
   }
-  // Trim trailing empty lines
   while (lines.length && !lines[lines.length - 1].trim()) lines.pop()
   const text = lines.join('\n')
   if (text) {
@@ -63,9 +55,7 @@ function copyLastCommand() {
   }
 }
 
-// ── Keyboard intercept ────────────────────────────────────────────────────────
 function onKey(e: KeyboardEvent) {
-  // Ctrl+Shift+C -> copy selection (override browser default)
   if (e.ctrlKey && e.shiftKey && e.key === 'C') {
     e.preventDefault()
     e.stopPropagation()
@@ -75,7 +65,6 @@ function onKey(e: KeyboardEvent) {
 
 onMounted(() => {
   initTerminal(props.winId)
-  // Attach after a tick to ensure xterm is mounted
   setTimeout(() => {
     const el = document.getElementById(`term-${props.winId}`)
     el?.addEventListener('keydown', onKey, true)
@@ -89,51 +78,43 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="term-wrap">
-    <div :id="`term-${winId}`" class="term-canvas" />
-
-    <teleport :to="`#actions-${winId}`">
-      <div class="flex items-center gap-1.5 px-2">
-        <button @click="copySelection"
-          class="pro-btn flex items-center justify-center w-7 h-7 rounded-md transition-all active:scale-90 opacity-40 hover:opacity-100 hover:bg-white/10"
-          title="Copy selection [Ctrl+Shift+C]">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5">
-            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
-            <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
-          </svg>
-        </button>
-        <button @click="copyLastCommand"
-          class="pro-btn flex items-center justify-center w-7 h-7 rounded-md transition-all active:scale-90 opacity-40 hover:opacity-100 hover:bg-white/10"
-          title="Copy last output">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"
-            stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-            <polyline points="14 2 14 8 20 8" />
-            <line x1="16" y1="13" x2="8" y2="13" />
-            <line x1="16" y1="17" x2="8" y2="17" />
-            <polyline points="10 9 9 9 8 9" />
-          </svg>
-        </button>
-        <button @click="copyFullBuffer"
-          class="pro-btn flex items-center justify-center w-7 h-7 rounded-md transition-all active:scale-90 opacity-40 hover:opacity-100 hover:bg-white/10"
-          title="Copy all text">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"
+  <div class="term-root">
+    <!-- Toolbar -->
+    <div class="term-toolbar">
+      <div class="term-toolbar-left">
+        <span class="term-badge">Terminal</span>
+      </div>
+      <div class="term-toolbar-right">
+        <button @click="copySelection" class="term-btn" title="Copy selection [Ctrl+Shift+C]">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"
             stroke-linecap="round" stroke-linejoin="round">
             <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
           </svg>
+          <span>Copy Selection</span>
         </button>
-        <Transition name="fade">
-          <span v-if="showCopied"
-            class="text-[9px] font-bold uppercase tracking-widest text-[#34d399] bg-[#34d399]/10 px-2 py-0.5 rounded-full border border-[#34d399]/20">Copied</span>
+
+        <button @click="copyFullBuffer" class="term-btn" title="Copy entire buffer">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+            <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
+          </svg>
+          <span>Copy All</span>
+        </button>
+        <Transition name="copied-fade">
+          <span v-if="showCopied" class="term-copied">✓</span>
         </Transition>
       </div>
-    </teleport>
+    </div>
+
+    <!-- xterm mount point -->
+    <div :id="`term-${winId}`" class="term-canvas" />
   </div>
 </template>
 
 <style scoped>
-.term-wrap {
+.term-root {
   position: absolute;
   inset: 0;
   display: flex;
@@ -141,32 +122,97 @@ onUnmounted(() => {
   background: #0c0c0c;
 }
 
+/* ── Toolbar ────────────────────────────────────────────────────── */
+.term-toolbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+  height: 30px;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.term-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.term-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: rgba(255, 255, 255, 0.2);
+}
+
+.term-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.term-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border: none;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 500;
+  transition: background 150ms, color 150ms, transform 100ms;
+  white-space: nowrap;
+}
+
+.term-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.term-btn:active {
+  transform: scale(0.94);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.term-copied {
+  font-size: 10px;
+  font-weight: 700;
+  color: #34d399;
+  background: rgba(52, 211, 153, 0.12);
+  border: 1px solid rgba(52, 211, 153, 0.25);
+  padding: 2px 8px;
+  border-radius: 999px;
+  letter-spacing: 0.04em;
+}
+
+/* ── Terminal canvas ─────────────────────────────────────────────── */
 .term-canvas {
   flex: 1;
-  padding: 2px;
   min-height: 0;
+  padding: 2px;
 }
 
-.pro-btn {
-  cursor: pointer;
-  color: white;
+/* ── Copied badge transition ─────────────────────────────────────── */
+.copied-fade-enter-active {
+  transition: opacity 200ms, transform 200ms;
 }
 
-
-.fade-enter-active {
-  transition: opacity 250ms var(--ease-out), transform 300ms var(--ease-out);
+.copied-fade-leave-active {
+  transition: opacity 180ms;
 }
 
-.fade-leave-active {
-  transition: opacity 200ms var(--ease-out);
-}
-
-.fade-enter-from {
+.copied-fade-enter-from {
   opacity: 0;
-  transform: translateY(4px) scale(0.95);
+  transform: translateY(4px) scale(0.92);
 }
 
-.fade-leave-to {
+.copied-fade-leave-to {
   opacity: 0;
 }
 </style>

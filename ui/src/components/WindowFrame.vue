@@ -98,8 +98,7 @@ const restoreMin = () => {
     </div>
 
     <!-- App content -->
-    <div class="flex-1 overflow-hidden relative pointer-events-auto" :style="{ opacity: isMin ? 0 : 1, pointerEvents: isMin ? 'none' : 'auto' }">
-      <div class="absolute inset-0 bg-linear-to-t from-black/60 to-transparent pointer-events-none" />
+    <div class="flex-1 overflow-hidden relative" :style="{ opacity: isMin ? 0 : 1, pointerEvents: isMin ? 'none' : 'auto' }">
       <slot />
     </div>
 

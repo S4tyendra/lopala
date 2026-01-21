@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import { windows } from '../composables/useWs'
-import { spawnWindow } from '../composables/useWindows'
+import { spawnWindow, focusWindow, broadcastWin } from '../composables/useWindows'
 
 const APPS = [
   { id: 'files',    label: 'Finder',   bg: '#1a6ef5', path: '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>' },
@@ -16,6 +16,18 @@ const APPS = [
 const hasWindow = (app: string) => Object.values(windows.value).some(w => w.app === app)
 
 const open = (id: string) => {
+  // Focus existing window of this app if it exists
+  const existingId = Object.keys(windows.value).find(k => windows.value[k].app === id)
+  if (existingId) {
+    const win = windows.value[existingId]
+    if (win.minimized) {
+       win.minimized = false
+       broadcastWin(win)
+    }
+    focusWindow(existingId)
+    return
+  }
+
   if (id === 'messages') spawnWindow('messages', { title: 'Messages', channel: 'global' })
   else if (id === 'canvas') {
     const canvasId = Math.random().toString(36).substring(7)

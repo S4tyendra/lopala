@@ -14,6 +14,7 @@ import ScreenshotApp from './components/apps/ScreenshotApp.vue'
 import ScreenViewApp from './components/apps/ScreenViewApp.vue'
 import TaskmanagerApp from './components/apps/TaskmanagerApp.vue'
 import CodeEditorApp from './components/apps/CodeEditorApp.vue'
+import MediaViewerApp from './components/apps/MediaViewerApp.vue'
 import HelpApp from './components/apps/HelpApp.vue'
 import Notifications from './components/Notifications.vue'
 import SpotlightSearch from './components/SpotlightSearch.vue'
@@ -239,6 +240,8 @@ onUnmounted(() => {
         <TaskmanagerApp v-else-if="win.app === 'taskmanager'" :win-id="win.id" />
         <CodeEditorApp v-else-if="win.app === 'editor'" :win-id="win.id" />
         <HelpApp v-else-if="win.app === 'help'" :win-id="win.id" />
+        <MediaViewerApp v-else-if="win.app === 'media'" :win-id="win.id" />
+        <div v-else class="p-8 text-center text-white/20">Unknown App: {{ win.app }}</div>
       </WindowFrame>
     </div>
 

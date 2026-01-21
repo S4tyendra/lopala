@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, computed, nextTick } from 'vue'
+import { ref, watch, onMounted, computed } from 'vue'
 import {
   globalScreenshotState,
   broadcastScreenshotState,
   bumpScreenshotVersion,
 } from '../../composables/useScreenshot'
 import type { FileEntry } from '../../types'
-import { spawnWindow } from '../../composables/useWindows'
-import { loadFiles } from '../../composables/useFiles'
+import { spawnWindow, nextZ } from '../../composables/useWindows'
+import { loadFiles, fileIcon, fileSizeHuman, formatDate } from '../../composables/useFiles'
+import { windows, wsSend } from '../../composables/useWs'
 
 const props = defineProps<{ winId: string }>()
-
 const s = globalScreenshotState
 
 const displays = ref<{name: string, description: string}[]>([])
@@ -18,9 +18,6 @@ const loadingDisplays = ref(false)
 
 const files = ref<FileEntry[]>([])
 const loadingFiles = ref(false)
-
-const scrollContainer = ref<HTMLElement | null>(null)
-let isSettingScroll = false
 
 // Fetch displays list from backend
 const fetchDisplays = async () => {
@@ -66,16 +63,41 @@ const selectDisplay = (name: string) => {
   fetchFiles(name)
 }
 
-const openImage = (path: string) => {
-  s.value.openedImage = path
-  bumpScreenshotVersion()
-  broadcastScreenshotState()
-}
-
-const closeImage = () => {
-  s.value.openedImage = null
-  bumpScreenshotVersion()
-  broadcastScreenshotState()
+const openMedia = (path: string, name: string) => {
+  // Find existing Media Viewer window OR spawn new one
+  const existingId = Object.keys(windows.value).find(id => windows.value[id].app === 'media')
+  
+  if (existingId) {
+    const win = windows.value[existingId]
+    const media = [...(win.args?.media || [])]
+    const index = media.findIndex(m => m.path === path)
+    
+    if (index === -1) {
+      media.push({ path, name, type: 'image' })
+      wsSend({
+        type: 'UpdateWindow',
+        window: { 
+          ...win, 
+          args: { ...win.args, media, activeIndex: media.length - 1 },
+          z: nextZ()
+        }
+      })
+    } else {
+      wsSend({
+        type: 'UpdateWindow',
+        window: { 
+          ...win, 
+          args: { ...win.args, activeIndex: index },
+          z: nextZ()
+        }
+      })
+    }
+  } else {
+    spawnWindow('media', {
+      title: 'Media Viewer',
+      args: { media: [{ path, name, type: 'image' }], activeIndex: 0 }
+    })
+  }
 }
 
 const takeScreenshot = async () => {
@@ -89,7 +111,7 @@ const takeScreenshot = async () => {
     if (res.ok) {
       const path = await res.text()
       await fetchFiles(s.value.display)
-      openImage(path)
+      openMedia(path, path.split('/').pop() || 'Screenshot.png')
     } else {
       console.error('Take screenshot failed:', await res.text())
     }
@@ -99,171 +121,110 @@ const takeScreenshot = async () => {
 }
 
 // Sync hooks
-watch(() => s.value.display, (d) => {
-  if (d) fetchFiles(d)
-})
-
-watch(() => s.value.version, () => {
-  if (s.value.display) {
-    fetchFiles(s.value.display)
-  }
-})
-
-watch(() => s.value.scrollTop, (val) => {
-  if (isSettingScroll || !scrollContainer.value) return
-  if (Math.abs(scrollContainer.value.scrollTop - val) > 5) {
-    isSettingScroll = true
-    scrollContainer.value.scrollTop = val
-    setTimeout(() => { isSettingScroll = false }, 50)
-  }
-})
-
-const onScroll = (e: Event) => {
-  if (isSettingScroll) return
-  const target = e.target as HTMLElement
-  s.value.scrollTop = target.scrollTop
-  broadcastScreenshotState()
-}
+watch(() => s.value.display, (d) => { if (d) fetchFiles(d) })
+watch(() => s.value.version, () => { if (s.value.display) fetchFiles(s.value.display) })
 
 onMounted(() => {
   fetchDisplays()
-  if (s.value.display) {
-    fetchFiles(s.value.display)
-  }
+  if (s.value.display) fetchFiles(s.value.display)
 })
-
-// UI formatting
-const formatTime = (ts: number) => {
-  return new Date(ts * 1000).toLocaleString(undefined, {
-    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit'
-  })
-}
-
-// Image viewer background close
-const onBgClick = (e: MouseEvent) => {
-  if ((e.target as HTMLElement).classList.contains('image-bg')) {
-    closeImage()
-  }
-}
 
 const openFileManager = () => {
   if (!s.value.display) return
   const path = `/tmp/lopala/screenshots/${s.value.display}`
   spawnWindow('files', { title: 'Finder' })
-  // loadFiles handles broadcasting this new path to all peers automatically
   loadFiles(path)
+}
+
+const formatDateTime = (ts: number) => {
+  return new Date(ts * 1000).toLocaleString(undefined, {
+    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+  })
 }
 </script>
 
 <template>
-  <div class="flex flex-col h-full bg-[#1e1e1e] text-white overflow-hidden text-[14px]">
+  <div class="flex flex-col h-full bg-[#0c0c0e] text-white overflow-hidden text-[13px] font-sans">
     
-    <!-- Top Bar: Display Selector & Take Button -->
-    <div class="flex-none flex items-center justify-between p-3 border-b border-white/10" style="background: rgba(255,255,255,0.03)">
-      <div class="flex items-center gap-2">
-        <span class="text-white/50 text-[13px] uppercase tracking-wider font-semibold">Display:</span>
-        <select 
-          :value="s.display" 
-          @change="(e) => selectDisplay((e.target as HTMLSelectElement).value)"
-          class="bg-white/10 hover:bg-white/15 px-3 py-1.5 rounded-md outline-none border border-white/5 focus:border-blue-500/50 transition-all duration-200 var(--ease-out) cursor-pointer font-medium text-[13px]"
-        >
-          <option v-for="d in displays" :key="d.name" :value="d.name" class="bg-black text-white">
-            {{ d.name }} - {{ d.description }}
-          </option>
-        </select>
-        <span v-if="loadingDisplays" class="text-white/50 ml-2">...</span>
+    <!-- Header -->
+    <div class="flex-none flex items-center justify-between p-3 border-b border-white/5 bg-white/2">
+      <div class="flex items-center gap-4">
+        <div class="flex items-center gap-2">
+          <span class="text-white/30 text-[10px] uppercase font-bold tracking-widest">Display</span>
+          <select 
+            :value="s.display" 
+            @change="(e) => selectDisplay((e.target as HTMLSelectElement).value)"
+            class="bg-white/5 hover:bg-white/10 px-2.5 py-1 rounded-md outline-none border border-white/10 transition-all cursor-pointer font-medium text-[12px] min-w-[120px]"
+          >
+            <option v-for="d in displays" :key="d.name" :value="d.name" class="bg-[#121214] text-white">
+              {{ d.name }}
+            </option>
+          </select>
+        </div>
       </div>
 
-      <div class="flex items-center gap-3">
-        <button 
-          @click="openFileManager"
-          :disabled="!s.display"
-          title="Open in File Manager"
-          class="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/15 disabled:opacity-30 disabled:cursor-not-allowed rounded-md transition-all duration-200 var(--ease-out) active:scale-95 text-[13px] font-medium border border-white/5"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
-          </svg>
-          <span class="hidden sm:inline">Files</span>
+      <div class="flex items-center gap-2">
+        <button @click="openFileManager" :disabled="!s.display" title="Show folder"
+          class="p-2 rounded-md hover:bg-white/10 disabled:opacity-30 transition-all active:scale-95 border border-white/5">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v11z"/></svg>
         </button>
-
         <button 
           @click="takeScreenshot"
           :disabled="!s.display"
-          class="flex items-center gap-2 px-4 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-30 disabled:cursor-not-allowed rounded-md transition-all duration-200 var(--ease-out) active:scale-95 font-medium shadow-[0_4px_12px_rgba(37,99,235,0.3)]"
+          class="flex items-center gap-2 px-4 py-1.5 bg-blue-500 hover:bg-blue-400 disabled:opacity-30 disabled:cursor-not-allowed rounded-md transition-all active:scale-95 font-bold text-[12px] shadow-[0_4px_12px_rgba(59,130,246,0.3)]"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19"></line>
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-          </svg>
-          <span>Take Screenshot</span>
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          Snapshot
         </button>
       </div>
     </div>
 
-    <!-- Content Area: Image Grid -->
-    <div class="flex-1 overflow-y-auto p-4" ref="scrollContainer" @scroll="onScroll">
-      <div v-if="loadingFiles && files.length === 0" class="text-white/40 text-center py-10">
-        Loading...
-      </div>
-      <div v-else-if="files.length === 0" class="text-white/40 text-center py-10">
-        No screenshots found for this display
+    <!-- List View -->
+    <div class="flex-1 overflow-y-auto">
+      <div v-if="loadingFiles && files.length === 0" class="flex items-center justify-center h-full opacity-20 italic">Loading items...</div>
+      <div v-else-if="files.length === 0" class="flex flex-col items-center justify-center h-full gap-2 opacity-20">
+         <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+         <div class="text-[14px]">Empty display gallery</div>
       </div>
       
-      <div v-else class="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4">
+      <div v-else class="flex flex-col">
+        <!-- List Header -->
+        <div class="flex items-center px-4 py-2 text-[10px] uppercase tracking-widest font-bold text-white/20 border-b border-white/5 sticky top-0 bg-[#0c0c0e]/95 backdrop-blur-md z-10">
+           <span class="flex-1">Filename</span>
+           <span class="w-32 text-right">Captured At</span>
+           <span class="w-20 text-right">Size</span>
+        </div>
+
         <div 
           v-for="f in files" 
           :key="f.path"
-          @click="openImage(f.path)"
-          class="group relative aspect-video bg-black/40 rounded-xl overflow-hidden border border-white/5 hover:border-white/20 transition-all duration-300 var(--ease-out) cursor-pointer shadow-lg active:scale-[0.98]"
+          @click="openMedia(f.path, f.name)"
+          class="group flex items-center px-4 py-2.5 cursor-pointer hover:bg-white/5 border-b border-white/3 transition-colors"
         >
-          <img 
-            :src="`/api/files/download?path=${encodeURIComponent(f.path)}&_=${Date.now()}`" 
-            class="w-full h-full object-cover transition-transform duration-500 var(--ease-out) group-hover:scale-105"
-            loading="lazy"
-          />
-          <div class="absolute inset-0 bg-linear-to-t from-black/60 to-transparent pointer-events-none" />
-          <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 var(--ease-out)">
-            <div class="absolute bottom-3 left-3 right-3 flex justify-between items-center text-[11px]">
-              <span class="text-white font-bold truncate drop-shadow-lg">{{ f.name }}</span>
-              <span class="text-white/60 font-medium">{{ formatTime(f.modified) }}</span>
-            </div>
+          <div class="flex-1 min-w-0 flex items-center gap-3">
+             <div class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center shrink-0 group-hover:bg-blue-500/20 group-hover:text-blue-400 transition-colors" v-html="fileIcon(f)"></div>
+             <span class="font-medium truncate group-hover:text-blue-400 transition-colors">{{ f.name }}</span>
           </div>
+          <span class="w-32 text-right text-[11px] text-white/30">{{ formatDateTime(f.modified) }}</span>
+          <span class="w-20 text-right text-[11px] text-white/20">{{ fileSizeHuman(f.size) }}</span>
         </div>
       </div>
     </div>
 
-    <!-- Image Viewer Overlay -->
-    <transition name="fade">
-      <div 
-        v-if="s.openedImage"
-        class="absolute inset-0 z-50 flex items-center justify-center p-6 bg-black/90 backdrop-blur-sm image-bg"
-        @click="onBgClick"
-      >
-        <div class="relative max-w-full max-h-full">
-          <button 
-            @click="closeImage"
-            class="absolute -top-4 -right-4 w-8 h-8 rounded-full bg-white/20 hover:bg-white/40 text-white flex items-center justify-center backdrop-blur-md shadow-lg transition-colors z-10"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-          
-          <img 
-            :src="`/api/files/download?path=${encodeURIComponent(s.openedImage)}&_=${Date.now()}`" 
-            class="max-w-full max-h-[calc(100vh-100px)] object-contain rounded-md shadow-2xl border border-white/10"
-          />
-          
-          <div class="mt-4 text-center text-white/50 text-[13px]">
-            {{ s.openedImage.split('/').pop() }}
-          </div>
-        </div>
-      </div>
-    </transition>
+    <!-- Status -->
+    <div class="h-6 flex items-center px-3 border-t border-white/5 bg-white/1 text-[10px] text-white/20 font-mono">
+       {{ files.length }} items in gallery
+       <span class="ml-auto opacity-50">{{ s.display }}</span>
+    </div>
   </div>
 </template>
+
+<style scoped>
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+</style>
 
 <style scoped>
 .fade-enter-active {
