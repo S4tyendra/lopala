@@ -36,7 +36,7 @@ function copyFullBuffer() {
   }
 }
 
-function copyLastOutput() {
+function copyLastCommand() {
   const t = getTerminal(props.winId)
   if (!t) return
   const buf = t.term.buffer.active

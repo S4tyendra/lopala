@@ -135,7 +135,7 @@ pub async fn download_file(Query(q): Query<PathQuery>) -> impl IntoResponse {
     };
 
     let name = p.file_name().unwrap_or_default().to_string_lossy().to_string();
-    let stream = ReaderStream::new(file);
+    let stream = ReaderStream::with_capacity(file, 1024 * 1024); // 1MB chunks instead of 8KB
     let body = Body::from_stream(stream);
 
     Response::builder()
