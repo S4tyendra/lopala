@@ -50,14 +50,24 @@ const handleEvent = (msg: any) => {
   switch (msg.type) {
     case 'SyncState': {
       const s = msg.state
+      // Preserve local windows (like Help dialogs) across state syncs
+      const locals = Object.values(windows.value).filter(w => w.local)
       windows.value = s.windows
+      for (const w of locals) windows.value[w.id] = w
+
       users.value = s.users
       chats.value = s.chats
       channels.value = s.channels ?? []
       workspaceCount.value = s.workspace_count
       canvasHistory.value = s.canvas_strokes ?? {}
       if (s.users[myId.value]) myColor.value = s.users[myId.value].color
-      nextTick(() => checkAndInitTerminals(currentWorkspace.value))
+      
+      nextTick(() => {
+        checkAndInitTerminals(currentWorkspace.value)
+        // Show help every time user unlocks/connects
+        const hostHelp = Object.values(windows.value).some(w => w.app === 'help' && w.local)
+        if (!hostHelp) spawnWindow('help', { title: 'Help', local: true })
+      })
       break
     }
     case 'UserJoined':
@@ -200,9 +210,6 @@ onMounted(() => {
     connectWs(handleEvent, {
       onOpen: () => {
         notif.wsConnected()
-        // Spawn local help window by default if not already open
-        const hostHelp = Object.values(windows.value).some(w => w.app === 'help' && w.local)
-        if (!hostHelp) spawnWindow('help', { title: 'Help', local: true })
       },
       onClose: () => notif.wsDisconnected(),
     })

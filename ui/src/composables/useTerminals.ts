@@ -33,6 +33,20 @@ export function initTerminal(id: string) {
   term.loadAddon(fitAddon)
   term.open(el)
 
+  term.parser.registerOscHandler(999, (data: string) => {
+    const parts = data.split(';')
+    if (parts[0] === 'DOWNLOAD' && parts[1]) {
+      const a = document.createElement('a')
+      a.href = `/api/files/download?path=${encodeURIComponent(parts[1])}`
+      a.download = ''
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      return true
+    }
+    return false
+  })
+
   // Use ResizeObserver so terminal always fits its container — handles window resize & maximize
   const ro = new ResizeObserver(() => {
     try {

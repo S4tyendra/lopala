@@ -72,6 +72,36 @@ async fn main() -> anyhow::Result<()> {
     std::fs::create_dir_all(live_dir).unwrap_or_default();
     info!("Cleared live stream dir: {}", live_dir);
 
+    // Ephemeral bin directory for injected CLI tools (inherits to all PTYs)
+    let bin_dir = "/tmp/lopala/bin";
+    std::fs::create_dir_all(bin_dir).unwrap_or_default();
+    let wdl_path = format!("{}/wdl", bin_dir);
+    let wdl_script = r#"#!/usr/bin/env bash
+if [ -z "$1" ]; then
+    echo "Usage: wdl <file-path>"
+    exit 1
+fi
+REAL_PATH=$(realpath "$1" 2>/dev/null)
+if [ ! -f "$REAL_PATH" ]; then
+   echo "Error: File not found: $1"
+   exit 1
+fi
+echo "Triggering download in browser: $REAL_PATH"
+printf "\033]999;DOWNLOAD;%s\007" "$REAL_PATH"
+"#;
+    if std::fs::write(&wdl_path, wdl_script).is_ok() {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = std::fs::set_permissions(&wdl_path, std::fs::Permissions::from_mode(0o755));
+    }
+
+    if let Ok(current_path) = std::env::var("PATH") {
+        if !current_path.contains(bin_dir) {
+            unsafe {
+                std::env::set_var("PATH", format!("{}:{}", bin_dir, current_path));
+            }
+        }
+    }
+
     // 3. (Optional) Run Cloudflare Tunnel
     let _tunnel = if args.tunnel {
         match tunnel::Tunnel::start(port).await {
