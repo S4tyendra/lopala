@@ -1,0 +1,80 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    name: Build & Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── Node / Bun ──────────────────────────────────────────────────────────
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Cache Bun dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ hashFiles('ui/bun.lockb') }}
+          restore-keys: bun-
+
+      - name: Build UI
+        working-directory: ./ui
+        run: |
+          bun install --frozen-lockfile
+          bun run build
+
+      # ── Rust ────────────────────────────────────────────────────────────────
+      - name: Setup Rust (stable + musl targets)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-musl,aarch64-unknown-linux-musl
+
+      # Swatinem/rust-cache must come AFTER toolchain setup so it can hash
+      # the correct toolchain fingerprint into the cache key.
+      - name: Cache Cargo registry & build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: release-musl
+
+      # cross uses Docker images that include the musl cross-toolchains,
+      # so we don't need to apt-get anything.
+      - name: Install cross
+        uses: taiki-e/install-action@cross
+
+      # ── Builds ──────────────────────────────────────────────────────────────
+      - name: Build x86_64-unknown-linux-musl
+        env:
+          RUSTFLAGS: "-C debuginfo=0"
+        run: |
+          cross build --release --target x86_64-unknown-linux-musl
+          mv target/x86_64-unknown-linux-musl/release/lopala lopala-linux-x64
+
+      - name: Build aarch64-unknown-linux-musl
+        env:
+          RUSTFLAGS: "-C debuginfo=0"
+        run: |
+          cross build --release --target aarch64-unknown-linux-musl
+          mv target/aarch64-unknown-linux-musl/release/lopala lopala-linux-arm64
+
+      # ── Release ─────────────────────────────────────────────────────────────
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            lopala-linux-x64
+            lopala-linux-arm64
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
