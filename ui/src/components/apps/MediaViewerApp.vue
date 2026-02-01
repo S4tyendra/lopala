@@ -129,7 +129,7 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.media-root { font-family: 'SamsungOneUI', sans-serif; }
+.media-root { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
 .tab.active { position: relative; }
 .tab.active::after {
   content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 1.5px;

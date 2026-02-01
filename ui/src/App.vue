@@ -275,7 +275,7 @@ onUnmounted(() => {
 /* Emoji elements use Samsung font first via global.css */
 .emoji,
 [data-emoji] {
-  font-family: 'SamsungOneUI', 'SamsungColorEmoji', 'Noto Color Emoji', emoji;
+  font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', emoji;
 }
 
 @keyframes winEnter {
