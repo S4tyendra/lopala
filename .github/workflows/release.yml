@@ -29,6 +29,16 @@ jobs:
           key: bun-${{ hashFiles('ui/bun.lockb') }}
           restore-keys: bun-
 
+      # Hijack node/npm/npx → bun.
+      # Astro's Node.js version check is bypassed since bun handles all execution.
+      - name: Hijack node/npm/npx → bun
+        run: |
+          mkdir -p ~/.bun-hijack
+          ln -sf "$(which bun)" ~/.bun-hijack/node
+          ln -sf "$(which bun)" ~/.bun-hijack/npm
+          ln -sf "$(which bunx)" ~/.bun-hijack/npx
+          echo "$HOME/.bun-hijack" >> $GITHUB_PATH
+
       - name: Build UI
         working-directory: ./ui
         run: |
