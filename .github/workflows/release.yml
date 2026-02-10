@@ -51,31 +51,33 @@ jobs:
         with:
           targets: x86_64-unknown-linux-musl,aarch64-unknown-linux-musl
 
-      # Swatinem/rust-cache must come AFTER toolchain setup so it can hash
-      # the correct toolchain fingerprint into the cache key.
+      # Swatinem/rust-cache must come AFTER toolchain setup.
       - name: Cache Cargo registry & build artifacts
         uses: Swatinem/rust-cache@v2
         with:
           shared-key: release-musl
 
-      # cross uses Docker images that include the musl cross-toolchains,
-      # so we don't need to apt-get anything.
-      - name: Install cross
-        uses: taiki-e/install-action@cross
+      # zigbuild uses Zig as the cross-linker:
+      # - No Docker (bun is available on host PATH)
+      # - No GLIBC mismatch (Zig handles the ABI boundary)
+      - name: Install Zig & cargo-zigbuild
+        run: |
+          sudo snap install zig --classic --beta
+          cargo install cargo-zigbuild --locked
 
       # ── Builds ──────────────────────────────────────────────────────────────
       - name: Build x86_64-unknown-linux-musl
         env:
           RUSTFLAGS: "-C debuginfo=0"
         run: |
-          cross build --release --target x86_64-unknown-linux-musl
+          cargo zigbuild --release --target x86_64-unknown-linux-musl
           mv target/x86_64-unknown-linux-musl/release/lopala lopala-linux-x64
 
       - name: Build aarch64-unknown-linux-musl
         env:
           RUSTFLAGS: "-C debuginfo=0"
         run: |
-          cross build --release --target aarch64-unknown-linux-musl
+          cargo zigbuild --release --target aarch64-unknown-linux-musl
           mv target/aarch64-unknown-linux-musl/release/lopala lopala-linux-arm64
 
       # ── Release ─────────────────────────────────────────────────────────────
