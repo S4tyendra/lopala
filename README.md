@@ -18,6 +18,7 @@ lopala
 
 ## Flags
 
+- `--max-users`: How many maximum concurrent users can connect at a time? (defaults to 10)
 - `--port <PORT>`: The local port to bind and listen on. Defaults to `8080`.
 - `--tunnel`: Instantly exposes Lopala to the public internet via Cloudflare. If no port is passed, it picks a random ephemeral port between `40000` and `60000`. It will auto-download `cloudflared` securely if it's not present on your system.
 

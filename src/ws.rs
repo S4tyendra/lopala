@@ -22,6 +22,14 @@ pub async fn ws_handler(
 }
 
 async fn handle_socket(mut socket: WebSocket, state: GlobalState) {
+    {
+        let data = state.data.lock().await;
+        if data.users.len() >= state.max_users {
+            tracing::warn!("Connection rejected: max concurrent users ({}) reached.", state.max_users);
+            let _ = socket.close().await;
+            return;
+        }
+    }
     info!("New client connected");
 
     // Send initial sync state

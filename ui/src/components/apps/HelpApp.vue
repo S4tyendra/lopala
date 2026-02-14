@@ -12,6 +12,13 @@ const shortcuts = [
   { keys: 'Double Click Title', desc: 'Maximize/Restore window' },
   { keys: 'wdl <file>', desc: 'Download file via Terminal to browser' },
 ]
+
+import { ref } from 'vue'
+const hideHelp = ref(localStorage.getItem('hide_help_forever') === 'true')
+const toggleHideHelp = () => {
+  hideHelp.value = !hideHelp.value
+  localStorage.setItem('hide_help_forever', hideHelp.value.toString())
+}
 </script>
 
 <template>
@@ -62,8 +69,13 @@ const shortcuts = [
       </div>
 
       <!-- Legal -->
+      <div class="mt-8 flex items-center justify-center gap-3 text-white/50 text-[13px] pb-4">
+        <input type="checkbox" id="hideHelp" :checked="hideHelp" @change="toggleHideHelp" class="accent-blue-500 w-4 h-4 rounded cursor-pointer" />
+        <label for="hideHelp" class="cursor-pointer hover:text-white/80 transition-colors">Hide help forever on this domain</label>
+      </div>
+
       <div
-        class="mt-16 pt-8 border-t border-white/5 text-white/20 text-[10px] text-center uppercase tracking-widest pb-12">
+        class="mt-8 pt-8 border-t border-white/5 text-white/20 text-[10px] text-center uppercase tracking-widest pb-12">
         Crafted with passion by Satyendra · MIT License
       </div>
     </div>

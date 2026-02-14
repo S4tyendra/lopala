@@ -1,9 +1,9 @@
 ---
-import '@/styles/global.css';
-import App from '@/App.vue';
+import "@/styles/global.css";
+import App from "@/App.vue";
 ---
 
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en" class="dark">
 	<head>
 		<meta charset="UTF-8" />
@@ -12,56 +12,124 @@ import App from '@/App.vue';
 		<meta name="generator" content={Astro.generator} />
 		<title>Lopala | Cloud Terminal</title>
 		<style>
-			:root { --font-sans: 'Inter', system-ui, -apple-system, sans-serif; }
-			body { font-family: var(--font-sans); margin: 0; background: #000; overflow: hidden; }
+			:root {
+				--font-sans: "Inter", system-ui, -apple-system, sans-serif;
+			}
+			body {
+				font-family: var(--font-sans);
+				margin: 0;
+				background: #000;
+				overflow: hidden;
+			}
 
 			/* Bootloader */
 			#bootloader {
-				position: fixed; inset: 0; z-index: 9999999;
-				background: #000; color: white; display: flex; flex-direction: column;
-				align-items: center; justify-content: center; gap: 40px;
+				position: fixed;
+				inset: 0;
+				z-index: 9999999;
+				background: #000;
+				color: white;
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				justify-content: center;
+				gap: 40px;
 				transition: opacity 800ms ease;
 			}
-			#boot-logo { width: 80px; height: 80px; }
+			#boot-logo {
+				width: 80px;
+				height: 80px;
+			}
 			#boot-bar {
-				width: 160px; height: 4px; border-radius: 4px; background: rgba(255,255,255,0.2);
-				position: relative; overflow: hidden;
+				width: 160px;
+				height: 4px;
+				border-radius: 4px;
+				background: rgba(255, 255, 255, 0.2);
+				position: relative;
+				overflow: hidden;
 			}
 			#boot-progress {
-				position: absolute; left: 0; top: 0; bottom: 0; width: 0%;
-				background: white; border-radius: 4px; transition: width 1.2s cubic-bezier(0.85, 0, 0.15, 1);
+				position: absolute;
+				left: 0;
+				top: 0;
+				bottom: 0;
+				width: 0%;
+				background: white;
+				border-radius: 4px;
+				transition: width 1.2s cubic-bezier(0.85, 0, 0.15, 1);
 			}
 
 			/* Mac Login Screen */
 			#login-screen {
-				position: fixed; inset: 0; z-index: 9999998;
-				background: url('/bg.svg') center/cover;
-				display: flex; flex-direction: column; align-items: center; justify-content: center;
-				transition: opacity 1s ease, transform 1.2s cubic-bezier(0.16, 1, 0.3, 1);
-				transform: scale(1.05); opacity: 0; pointer-events: none;
+				position: fixed;
+				inset: 0;
+				z-index: 9999998;
+				background: url("/bg.svg") center/cover;
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				justify-content: center;
+				transition:
+					opacity 1s ease,
+					transform 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+				transform: scale(1.05);
+				opacity: 0;
+				pointer-events: none;
 			}
 			#login-screen::before {
-				content: ''; position: absolute; inset: 0;
+				content: "";
+				position: absolute;
+				inset: 0;
 				backdrop-filter: blur(24px) brightness(0.7);
 				-webkit-backdrop-filter: blur(24px) brightness(0.7);
 			}
 			.login-box {
-				position: relative; display: flex; flex-direction: column; align-items: center; gap: 24px;
-				z-index: 10; animation: fadeUp 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+				position: relative;
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				gap: 24px;
+				z-index: 10;
+				animation: fadeUp 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 			}
-			@keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-			
+			@keyframes fadeUp {
+				from {
+					opacity: 0;
+					transform: translateY(20px);
+				}
+				to {
+					opacity: 1;
+					transform: translateY(0);
+				}
+			}
+
 			.avatar-clip {
-				width: 120px; height: 120px; border-radius: 50%;
+				width: 120px;
+				height: 120px;
+				border-radius: 50%;
 				background: linear-gradient(135deg, #1e1e24, #0a0a0c);
-				display: flex; align-items: center; justify-content: center;
-				box-shadow: 0 12px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1);
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				box-shadow:
+					0 12px 32px rgba(0, 0, 0, 0.5),
+					inset 0 1px 0 rgba(255, 255, 255, 0.1);
 				overflow: hidden;
 			}
-			.avatar-svg { width: 60%; fill: rgba(255,255,255,0.7); }
-			
-			.login-title { font-size: 24px; font-weight: 600; color: white; margin: 0; letter-spacing: -0.02em; text-shadow: 0 2px 8px rgba(0,0,0,0.4); }
-			
+			.avatar-svg {
+				width: 60%;
+				fill: rgba(255, 255, 255, 0.7);
+			}
+
+			.login-title {
+				font-size: 24px;
+				font-weight: 600;
+				color: white;
+				margin: 0;
+				letter-spacing: -0.02em;
+				text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+			}
+
 			.login-input-wrap {
 				position: relative;
 				width: 280px;
@@ -74,19 +142,33 @@ import App from '@/App.vue';
 				flex-direction: column;
 				gap: 20px;
 				box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-				transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+				transition: transform 0.3s
+					cubic-bezier(0.175, 0.885, 0.32, 1.275);
 			}
 
 			.login-input-wrap.error {
-				animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+				animation: shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
 				border-color: rgba(239, 68, 68, 0.4);
 			}
 
 			@keyframes shake {
-				10%, 90% { transform: translate3d(-1px, 0, 0); }
-				20%, 80% { transform: translate3d(2px, 0, 0); }
-				30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
-				40%, 60% { transform: translate3d(4px, 0, 0); }
+				10%,
+				90% {
+					transform: translate3d(-1px, 0, 0);
+				}
+				20%,
+				80% {
+					transform: translate3d(2px, 0, 0);
+				}
+				30%,
+				50%,
+				70% {
+					transform: translate3d(-4px, 0, 0);
+				}
+				40%,
+				60% {
+					transform: translate3d(4px, 0, 0);
+				}
 			}
 
 			.input-field {
@@ -121,9 +203,17 @@ import App from '@/App.vue';
 				gap: 8px;
 			}
 
-			.login-submit:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(255,255,255,0.2); }
-			.login-submit:active { transform: translateY(0); }
-			.login-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+			.login-submit:hover {
+				transform: translateY(-1px);
+				box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
+			}
+			.login-submit:active {
+				transform: translateY(0);
+			}
+			.login-submit:disabled {
+				opacity: 0.5;
+				cursor: not-allowed;
+			}
 
 			#auth-status {
 				font-size: 13px;
@@ -137,30 +227,69 @@ import App from '@/App.vue';
 	<body>
 		<!-- 1. Apple-style Bootloader -->
 		<div id="bootloader">
-			<!-- Minimalist glowing circle logo -->
-			<svg id="boot-logo" viewBox="0 0 100 100">
-				<circle cx="50" cy="50" r="30" fill="none" stroke="white" stroke-width="8" />
-				<circle cx="50" cy="50" r="14" fill="white" />
-			</svg>
+			<!-- Penguin boot logo -->
+			<img
+				id="boot-logo"
+				src="/linux.svg"
+				style="width: 70px; height: 70px; filter: brightness(0) invert(1); opacity: 0.9;"
+			/>
 			<div id="boot-bar"><div id="boot-progress"></div></div>
 		</div>
 
 		<!-- 2. Mac-style Login Screen -->
 		<div id="login-screen">
 			<div class="login-box">
-				<div class="avatar-clip">
-					<svg class="avatar-svg" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+				<div
+					class="avatar-clip"
+					style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 8px 32px rgba(0,0,0,0.4);"
+				>
+					<img
+						class="avatar-svg"
+						src="/linux.svg"
+						style="width: 65px; height: 65px; filter: brightness(0) invert(1); opacity: 0.8;"
+					/>
 				</div>
-				<h1 class="login-title" style="margin-bottom: 8px;">Lopala OS</h1>
-				<form id="login-form" class="login-input-wrap" onsubmit="event.preventDefault(); submitLogin();">
+				<h1 class="login-title" style="margin-bottom: 8px;">
+					Lopala OS
+				</h1>
+				<form
+					id="login-form"
+					class="login-input-wrap"
+					onsubmit="event.preventDefault(); submitLogin();"
+				>
 					<div id="auth-status"></div>
-					<input id="login-name-input" class="input-field" type="text" placeholder="Username" autocomplete="off" required>
-					<input id="login-pin-input" class="input-field" type="password" placeholder="PIN Code" autocomplete="off" required inputmode="numeric" maxlength="4">
+					<input
+						id="login-name-input"
+						class="input-field"
+						type="text"
+						placeholder="Username"
+						autocomplete="off"
+						required
+					/>
+					<input
+						id="login-pin-input"
+						class="input-field"
+						type="password"
+						placeholder="PIN Code"
+						autocomplete="off"
+						required
+						inputmode="numeric"
+						maxlength="4"
+					/>
 					<button id="login-btn" class="login-submit" type="submit">
-						<span>Unlock Terminal</span>
-						<svg style="width: 16px; height: 16px;" viewBox="0 0 24 24"><path fill="currentColor" d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg>
+						<span>Signin</span>
+						<svg
+							style="width: 16px; height: 16px;"
+							viewBox="0 0 24 24"
+							><path
+								fill="currentColor"
+								d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"
+							></path></svg
+						>
 					</button>
-					<div style="font-size: 11px; opacity: 0.4; text-align: center; font-weight: 500; margin-top: 10px; color: white;">
+					<div
+						style="font-size: 11px; opacity: 0.4; text-align: center; font-weight: 500; margin-top: 10px; color: white;"
+					>
 						See your server terminal for AUTH PIN
 					</div>
 				</form>
@@ -174,28 +303,34 @@ import App from '@/App.vue';
 		<script is:inline>
 			// Boot Sequence Exec
 			window.onload = () => {
-				const hasName = localStorage.getItem('lopala_name');
+				const hasName = localStorage.getItem("lopala_name");
 				// We don't check for cookie here anymore to ENFORCE pin on refresh
-				const boot = document.getElementById('bootloader');
-				const prog = document.getElementById('boot-progress');
-				const login = document.getElementById('login-screen');
-				const input = document.getElementById('login-name-input');
-				const pinInput = document.getElementById('login-pin-input');
+				const boot = document.getElementById("bootloader");
+				const prog = document.getElementById("boot-progress");
+				const login = document.getElementById("login-screen");
+				const input = document.getElementById("login-name-input");
+				const pinInput = document.getElementById("login-pin-input");
 
 				// Simulate fast boot loading
-				if (prog) setTimeout(() => { prog.style.width = '45%'; }, 100);
-				if (prog) setTimeout(() => { prog.style.width = '100%'; }, 500);
+				if (prog)
+					setTimeout(() => {
+						prog.style.width = "45%";
+					}, 100);
+				if (prog)
+					setTimeout(() => {
+						prog.style.width = "100%";
+					}, 500);
 
 				setTimeout(() => {
-					if (boot) boot.style.opacity = '0';
+					if (boot) boot.style.opacity = "0";
 					setTimeout(() => boot && boot.remove(), 800);
 
 					// Always show login screen to verify PIN on fresh load
 					if (login) {
 						if (hasName && input) input.value = hasName;
-						login.style.opacity = '1';
-						login.style.transform = 'scale(1)';
-						login.style.pointerEvents = 'auto';
+						login.style.opacity = "1";
+						login.style.transform = "scale(1)";
+						login.style.pointerEvents = "auto";
 						if (hasName && pinInput) {
 							setTimeout(() => pinInput.focus(), 800);
 						} else if (input) {
@@ -206,11 +341,11 @@ import App from '@/App.vue';
 			};
 
 			window.submitLogin = async () => {
-				const form = document.getElementById('login-form');
-				const nameInput = document.getElementById('login-name-input');
-				const pinInput = document.getElementById('login-pin-input');
-				const status = document.getElementById('auth-status');
-				const btn = document.getElementById('login-btn');
+				const form = document.getElementById("login-form");
+				const nameInput = document.getElementById("login-name-input");
+				const pinInput = document.getElementById("login-pin-input");
+				const status = document.getElementById("auth-status");
+				const btn = document.getElementById("login-btn");
 
 				if (!nameInput || !pinInput || !status || !btn) return;
 
@@ -220,40 +355,40 @@ import App from '@/App.vue';
 				if (!name || !pin) return;
 
 				btn.disabled = true;
-				status.textContent = '';
-				form.classList.remove('error');
+				status.textContent = "";
+				form.classList.remove("error");
 
 				try {
 					// Verify pin with backend
-					const res = await fetch('/api/auth/verify', {
-						method: 'POST',
-						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify({ pin })
+					const res = await fetch("/api/auth/verify", {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ pin }),
 					});
 
 					if (res.ok) {
-						localStorage.setItem('lopala_name', name);
+						localStorage.setItem("lopala_name", name);
 						window.lopalaName = name;
-						
+
 						// Session cookie: no max-age, deleted on browser close
 						document.cookie = `lopala_pin=${pin}; path=/; samesite=strict`;
-						
-						const login = document.getElementById('login-screen');
+
+						const login = document.getElementById("login-screen");
 						if (login) {
-							login.style.transform = 'scale(1.1)';
-							login.style.opacity = '0';
-							login.style.pointerEvents = 'none';
+							login.style.transform = "scale(1.1)";
+							login.style.opacity = "0";
+							login.style.pointerEvents = "none";
 							setTimeout(() => login.remove(), 1000);
 						}
-						window.dispatchEvent(new Event('app-login'));
+						window.dispatchEvent(new Event("app-login"));
 					} else {
-						form.classList.add('error');
-						status.textContent = 'Invalid PIN Code';
-						pinInput.value = '';
+						form.classList.add("error");
+						status.textContent = "Invalid PIN Code";
+						pinInput.value = "";
 						pinInput.focus();
 					}
 				} catch (e) {
-					status.textContent = 'Connection Error';
+					status.textContent = "Connection Error";
 				} finally {
 					btn.disabled = false;
 				}

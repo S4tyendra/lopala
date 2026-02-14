@@ -64,9 +64,10 @@ const handleEvent = (msg: any) => {
       
       nextTick(() => {
         checkAndInitTerminals(currentWorkspace.value)
-        // Show help every time user unlocks/connects
+        // Show help every time user unlocks/connects unless disabled
+        const hideHelp = localStorage.getItem('hide_help_forever') === 'true'
         const hostHelp = Object.values(windows.value).some(w => w.app === 'help' && w.local)
-        if (!hostHelp) spawnWindow('help', { title: 'Help', local: true })
+        if (!hostHelp && !hideHelp) spawnWindow('help', { title: 'Help', local: true })
       })
       break
     }

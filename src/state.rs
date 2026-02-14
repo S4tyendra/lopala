@@ -188,10 +188,11 @@ pub struct GlobalState {
     // Per-file editor document versions (file_path -> latest version)
     pub editor_versions: Arc<Mutex<HashMap<String, u64>>>,
     pub processes: Arc<tokio::sync::RwLock<Vec<ProcessInfo>>>,
+    pub max_users: usize,
 }
 
 impl GlobalState {
-    pub fn new() -> Self {
+    pub fn new(max_users: usize) -> Self {
         let (tx, _) = broadcast::channel(1024);
         GlobalState {
             data: Arc::new(Mutex::new(AppStateData {
@@ -211,6 +212,7 @@ impl GlobalState {
             stream_tasks: Arc::new(Mutex::new(HashMap::new())),
             editor_versions: Arc::new(Mutex::new(HashMap::new())),
             processes: Arc::new(tokio::sync::RwLock::new(Vec::new())),
+            max_users,
         }
     }
 }

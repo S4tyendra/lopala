@@ -31,6 +31,10 @@ struct Args {
     /// 4-digit PIN for authentication. If not provided, one is generated.
     #[arg(long)]
     pin: Option<String>,
+
+    /// Limit max concurrent users
+    #[arg(long, default_value_t = 10)]
+    max_users: usize,
 }
 
 #[tokio::main]
@@ -120,7 +124,12 @@ printf "\033]999;DOWNLOAD;%s\007" "$REAL_PATH"
 
     // 4. Start HTTP Server (with graceful CTRL-C cleanup)
     info!("Lopala UI ready at http://localhost:{}", port);
-    let global_state = state::GlobalState::new();
+    
+    if args.max_users > 10 {
+        tracing::warn!("WARNING: max_users is {}; setting it >10 will degrade performance.", args.max_users);
+    }
+    
+    let global_state = state::GlobalState::new(args.max_users);
 
     // Upload sessions store + 3-min idle reaper
     let upload_sessions: upload::UploadSessions = std::sync::Arc::new(tokio::sync::RwLock::new(std::collections::HashMap::new()));

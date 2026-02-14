@@ -21,9 +21,7 @@ const props = defineProps<{ clock: string; activeApp: string }>()
     <!-- Left — logo + active app -->
     <div class="flex items-center gap-3.5 h-full">
       <div class="cursor-default px-1 h-full flex items-center transition-opacity duration-200 hover:opacity-100 opacity-80 active:scale-95">
-        <svg viewBox="0 0 24 24" class="w-3.5 h-3.5 fill-white">
-          <path d="M15.2 10.5c-.1-2.5 2-3.7 2.1-3.8-1.2-1.7-3-1.9-3.6-2-.8-.1-2.1.5-2.8.5-.8 0-1.8-.5-2.7-.5-1.2 0-2.4.7-3 1.8-1.3 2.3-.3 5.7 1 7.6.6.9 1.3 1.9 2.3 1.9.9 0 1.3-.6 2.4-.6 1.1 0 1.4.6 2.4.6 1 0 1.6-1 2.2-1.9.8-1.1 1.1-2.2 1.1-2.2-.1-.1-1.4-.5-1.4-2.4zM11.6 3.4c.5-.6.8-1.4.7-2.2-.7 0-1.6.3-2.1.9-.4.5-.8 1.3-.7 2.1.8.1 1.6-.2 2.1-.8z"/>
-        </svg>
+        <img src="/linux.svg" class="w-4 h-4 object-contain" style="filter: brightness(0) invert(1);" alt="Linux" />
       </div>
       <div class="font-bold tracking-tight cursor-default opacity-90 transition-all duration-200 ease-out">
         {{ activeApp }}
