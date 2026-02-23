@@ -4,7 +4,8 @@ A zero-config, real-time Web Operating System that drops onto your local machine
 
 Technical details on why it exists: [satyendra.in/blog/why-i-built-lopala](https://satyendra.in/blog/why-i-built-lopala)
 
-[![Lopala Demo](https://x.devh.in/f/lopala-demo)](https://x.devh.in/#f/lopala-demo)
+[Lopala DEMO](https://github.com/user-attachments/assets/0c08697f-8150-4f20-80dc-eb1f046f8dc0)
+
 
 ## Drop It In (Installation)
 
