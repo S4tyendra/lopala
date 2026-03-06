@@ -6,6 +6,7 @@ export const myId = ref(Math.random().toString(36).substring(7))
 export const myName = ref('')
 export const myColor = ref('#e8f4ff')
 export const showNamePrompt = ref(true)
+export const myLatency = ref<number | null>(null)
 
 export const currentWorkspace = ref(0)
 export const workspaceCount = ref(4)
@@ -32,6 +33,9 @@ function buildUrl() {
   return `${proto}//${location.host}/_ws`
 }
 
+let pingTimer: ReturnType<typeof setInterval> | null = null
+let pendingPingTs: number | null = null
+
 export function connectWs(onEvent: (msg: any) => void, callbacks?: { onOpen?: () => void; onClose?: () => void }) {
   if (ws.value && ws.value.readyState < 2) ws.value.close()
 
@@ -44,13 +48,33 @@ export function connectWs(onEvent: (msg: any) => void, callbacks?: { onOpen?: ()
       user: { id: myId.value, name: myName.value, x: 0, y: 0, workspace: currentWorkspace.value, color: '' }
     }))
     callbacks?.onOpen?.()
+
+    // Latency ping loop — every 5s
+    if (pingTimer) clearInterval(pingTimer)
+    pingTimer = setInterval(() => {
+      if (socket.readyState !== WebSocket.OPEN) return
+      pendingPingTs = Date.now()
+      socket.send(JSON.stringify({ type: 'Ping', ts: pendingPingTs }))
+    }, 5000)
   }
 
   socket.onmessage = (e) => {
-    try { onEvent(JSON.parse(e.data)) } catch {}
+    try {
+      const msg = JSON.parse(e.data)
+      if (msg.type === 'Pong' && pendingPingTs !== null) {
+        const latency = Date.now() - pendingPingTs
+        myLatency.value = latency
+        pendingPingTs = null
+        // Broadcast our latency so other clients can display it
+        wsSend({ type: 'LatencyBroadcast', id: myId.value, latency_ms: latency })
+        return
+      }
+      onEvent(msg)
+    } catch {}
   }
 
   socket.onclose = () => {
+    if (pingTimer) { clearInterval(pingTimer); pingTimer = null }
     callbacks?.onClose?.()
     // Reconnect after 2s
     reconnectTimer = setTimeout(() => connectWs(onEvent, callbacks), 2000)

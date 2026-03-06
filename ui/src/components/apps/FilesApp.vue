@@ -13,7 +13,30 @@ const props = defineProps<{ winId: string }>()
 const s = computed(() => getFileState(props.winId))
 const showUploader = ref(false)
 
-onMounted(() => initFileState(props.winId))
+onMounted(async () => {
+  const win = windows.value[props.winId]
+  const initialPath = win?.initialPath as string | undefined
+  const initialSelect = win?.initialSelect as string | undefined
+
+  await initFileState(props.winId)
+
+  if (initialPath && initialPath !== '/home') {
+    await loadFiles(props.winId, initialPath, true)
+  }
+
+  if (initialSelect && s.value) {
+    // Pre-select the file by name
+    const match = s.value.entries.find(e => e.name === initialSelect)
+    if (match) {
+      s.value.selected = new Set([match.path])
+      // Scroll to it after next paint
+      nextTick(() => {
+        const el = listEl.value?.querySelector?.(`[data-path="${match.path}"]`) as HTMLElement | null
+        el?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      })
+    }
+  }
+})
 onUnmounted(() => { if (s.value) s.value.contextMenu = null })
 
 // ── Navigation ────────────────────────────────────────────────────────────────
@@ -339,6 +362,7 @@ const previewEntry = computed(() => {
         <!-- Grid view -->
         <div v-else-if="s.viewMode === 'grid'" class="p-3 grid gap-2 content-start" style="grid-template-columns: repeat(auto-fill, minmax(80px, 1fr))">
           <div v-for="entry in s.entries" :key="entry.path"
+            :data-path="entry.path"
             @click.stop="toggleSelect($event, entry.path)"
             @dblclick.stop="openEntry(props.winId, entry)"
             @contextmenu.stop.prevent="openContextMenu($event, entry)"

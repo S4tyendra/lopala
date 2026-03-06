@@ -95,7 +95,7 @@ const handleEvent = (msg: any) => {
       nextTick(() => {
         const w = msg.window
         if (w.app === 'terminal') checkAndInitTerminals(currentWorkspace.value)
-        if (w.app === 'files') initFileState()
+        if (w.app === 'files') initFileState(w.id)
       })
       break
     case 'UpdateWindow':
@@ -148,6 +148,9 @@ const handleEvent = (msg: any) => {
       break
     case 'ScreenshotSync':
       applyRemoteScreenshotState(msg.state)
+      break
+    case 'LatencyBroadcast':
+      if (users.value[msg.id]) users.value[msg.id].latency_ms = msg.latency_ms
       break
   }
 }

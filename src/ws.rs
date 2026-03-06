@@ -256,6 +256,22 @@ async fn handle_client_event(event: WsEvent, state: GlobalState, direct_tx: mpsc
         WsEvent::TaskmanagerSync { state: tm_state } => {
             let _ = state.tx.send(WsEvent::TaskmanagerSync { state: tm_state });
         }
+        // ── Latency ──────────────────────────────────────────────────────────
+        WsEvent::Ping { ts } => {
+            // Echo directly back to this client — no broadcast
+            if let Ok(json) = serde_json::to_string(&WsEvent::Pong { ts }) {
+                let _ = direct_tx.send(json).await;
+            }
+        }
+        WsEvent::LatencyBroadcast { id, latency_ms } => {
+            // Update in shared state so SyncState carries it for late joiners
+            let mut data = state.data.lock().await;
+            if let Some(user) = data.users.get_mut(&id) {
+                user.latency_ms = latency_ms;
+            }
+            drop(data);
+            let _ = state.tx.send(WsEvent::LatencyBroadcast { id, latency_ms });
+        }
         _ => {}
     }
 }

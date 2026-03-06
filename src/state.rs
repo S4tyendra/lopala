@@ -24,6 +24,8 @@ pub struct User {
     pub y: f64,
     pub workspace: u32,
     pub color: String,
+    #[serde(default)]
+    pub latency_ms: u32,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -256,4 +258,8 @@ pub enum WsEvent {
     EditorCursor { cursor: EditorCursor },
     // Taskmanager sync
     TaskmanagerSync { state: TaskmanagerStateSync },
+    // Latency measurement
+    Ping { ts: u64 },
+    Pong { ts: u64 },
+    LatencyBroadcast { id: String, latency_ms: u32 },
 }

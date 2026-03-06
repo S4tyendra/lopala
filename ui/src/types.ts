@@ -18,6 +18,8 @@ export interface AppWindow {
   // store pre-max state inline
   _px?: number; _py?: number; _pw?: number; _ph?: number
   args?: any // For passing data on spawn, e.g. which file to open
+  initialPath?: string
+  initialSelect?: string
 }
 
 export interface User {
@@ -27,6 +29,7 @@ export interface User {
   y: number
   workspace: number
   color: string
+  latency_ms?: number
 }
 
 export interface ChatMessage {

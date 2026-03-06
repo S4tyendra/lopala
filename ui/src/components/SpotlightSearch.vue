@@ -2,7 +2,6 @@
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { channels, wsSend } from '../composables/useWs'
 import { nextZ } from '../composables/useWindows'
-import { loadFiles } from '../composables/useFiles'
 
 // ─── Visibility ───────────────────────────────────────────────────────────────
 const open = ref(false)
@@ -123,7 +122,9 @@ const openChannel = (chId: string, chName: string) => {
 
 const openFile = (path: string) => {
   const dir = path.replace(/\/[^/]+$/, '') || '/'
-  loadFiles(dir) // Tell Files app to natively load the path
+  const fileName = path.split('/').pop() ?? ''
+  // Find an existing files window to reuse, or spawn a new one
+  const existingWin = Object.values((window as any).__lopala_windows?.value ?? {}).find((w: any) => w.app === 'files')
   wsSend({
     type: 'SpawnWindow',
     window: {
@@ -134,6 +135,7 @@ const openFile = (path: string) => {
       z: nextZ(), minimized: false, maximized: false,
       title: 'Finder',
       initialPath: dir,
+      initialSelect: fileName,
     }
   })
   closeSpotlight()
@@ -214,9 +216,10 @@ onUnmounted(() => {
                 stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
               </svg>
-              <input ref="inputEl" v-model="query"
+            <input ref="inputEl" v-model="query"
                 placeholder="Search apps, files, channels…"
-                class="flex-1 bg-transparent outline-none text-[15px] text-white placeholder-white/30 font-medium"
+                class="flex-1 bg-transparent outline-none text-[15px] font-medium placeholder-white/30"
+                style="color: rgba(255,255,255,0.92)"
               />
               <div v-if="searching" class="w-3.5 h-3.5 border-2 rounded-full animate-spin flex-none"
                 style="border-color:rgba(255,255,255,0.3); border-top-color:rgba(255,255,255,0.8)" />

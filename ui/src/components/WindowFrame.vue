@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import type { AppWindow } from '../types'
 import {
   focusWindow, closeWindow, toggleMaximize, startDrag, startResize,
@@ -23,6 +23,13 @@ const restoreMin = () => {
   broadcastWin(props.win)
   focusWindow(props.win.id)
 }
+
+// One-shot entrance animation — only on initial mount, not on z-index focus changes
+const justMounted = ref(false)
+onMounted(() => {
+  justMounted.value = true
+  setTimeout(() => { justMounted.value = false }, 300)
+})
 </script>
 
 <template>
@@ -53,7 +60,8 @@ const restoreMin = () => {
       border: '1px solid rgba(255,255,255,0.13)',
       boxShadow: '0 30px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.18)',
     }"
-    style="animation: winEnter 250ms var(--ease-out) both; will-change: transform, left, top, width, height;"
+    style="will-change: transform, left, top, width, height;"
+    :class="{ 'win-enter-anim': justMounted }"
     @mousedown="isMin ? restoreMin() : focusWindow(win.id)"
   >
     <!-- Window Drag handle / Title bar -->
@@ -111,3 +119,13 @@ const restoreMin = () => {
       @mousedown.stop="startResize($event, win, 's')" />
   </div>
 </template>
+
+<style scoped>
+.win-enter-anim {
+  animation: winEnter 250ms var(--ease-out) both;
+}
+@keyframes winEnter {
+  from { opacity: 0; transform: scale(0.96) translateY(10px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+</style>
