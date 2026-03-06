@@ -127,6 +127,10 @@ export const visibleWindows = computed(() =>
     .sort((a, b) => a.z - b.z)
 )
 
+export const sortedWindows = computed(() =>
+  Object.values(windows.value).sort((a, b) => a.z - b.z)
+)
+
 export const minimizedSlots = computed(() => {
   const mins = Object.values(windows.value)
     .filter(w => w.workspace === currentWorkspace.value && w.minimized)

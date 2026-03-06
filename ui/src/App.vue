@@ -24,7 +24,7 @@ import {
   channels, currentWorkspace, workspaceCount, wsSend, connectWs, canvasHistory,
 } from './composables/useWs'
 import { 
-  visibleWindows, onDragMove, onDragEnd, focusWindow, nextZ, syncZTop, minimizedSlots,
+  visibleWindows, sortedWindows, onDragMove, onDragEnd, focusWindow, nextZ, syncZTop, minimizedSlots,
   spawnWindow 
 } from './composables/useWindows'
 import { checkAndInitTerminals, writeToTerminal, disposeTerminal } from './composables/useTerminals'
@@ -211,8 +211,12 @@ onMounted(() => {
     connectWs(handleEvent, {
       onOpen: () => {
         notif.wsConnected()
+        window.dispatchEvent(new Event("ws-connected"))
       },
-      onClose: () => notif.wsDisconnected(),
+      onClose: () => {
+        notif.wsDisconnected()
+        window.dispatchEvent(new Event("ws-error"))
+      },
     })
   })
 })
@@ -236,7 +240,7 @@ onUnmounted(() => {
 
     <!-- Windows layer -->
     <div class="absolute inset-0 top-7 bottom-20">
-      <WindowFrame v-for="win in visibleWindows" :key="win.id" :win="win" @mousedown="focusWindow(win.id)">
+      <WindowFrame v-for="win in sortedWindows" :key="win.id" :win="win" v-show="win.workspace === currentWorkspace" @mousedown="focusWindow(win.id)">
         <TerminalApp v-if="win.app === 'terminal'" :win-id="win.id" />
         <FilesApp v-else-if="win.app === 'files'" :win-id="win.id" />
         <MessagesApp v-else-if="win.app === 'messages'" :win-id="win.id" :channel="win.channel ?? 'global'"

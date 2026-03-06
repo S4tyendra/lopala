@@ -340,6 +340,39 @@ import App from "@/App.vue";
 				}, 1100);
 			};
 
+			window.addEventListener("ws-connected", () => {
+				const login = document.getElementById("login-screen");
+				const btn = document.getElementById("login-btn");
+				if (btn) btn.innerHTML = `<span>Connected!</span>`;
+				if (login) {
+					login.style.transform = "scale(1.1)";
+					login.style.opacity = "0";
+					login.style.pointerEvents = "none";
+					setTimeout(() => login.remove(), 1000);
+				}
+			});
+
+			window.addEventListener("ws-error", () => {
+				const form = document.getElementById("login-form");
+				const btn = document.getElementById("login-btn");
+				const status = document.getElementById("auth-status");
+				if (form) form.classList.add("error");
+				if (status) status.textContent = "WebSocket Connection Failed";
+				if (btn) {
+					btn.disabled = false;
+					btn.innerHTML = `
+						<span>Signin</span>
+						<svg
+							style="width: 16px; height: 16px;"
+							viewBox="0 0 24 24"
+							><path
+								fill="currentColor"
+								d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"
+							></path></svg>
+					`;
+				}
+			});
+
 			window.submitLogin = async () => {
 				const form = document.getElementById("login-form");
 				const nameInput = document.getElementById("login-name-input");
@@ -370,26 +403,25 @@ import App from "@/App.vue";
 						localStorage.setItem("lopala_name", name);
 						window.lopalaName = name;
 
+						btn.innerHTML = `
+							<svg class="animate-spin" viewBox="0 0 24 24" style="width:16px;height:16px;margin-right:8px;animation:spin 1s linear infinite;"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none" style="opacity:0.25;"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+							<span>Connecting...</span>
+							<style>@keyframes spin { 100% { transform: rotate(360deg); } }</style>
+						`;
+
 						// Session cookie: no max-age, deleted on browser close
 						document.cookie = `lopala_pin=${pin}; path=/; samesite=strict`;
 
-						const login = document.getElementById("login-screen");
-						if (login) {
-							login.style.transform = "scale(1.1)";
-							login.style.opacity = "0";
-							login.style.pointerEvents = "none";
-							setTimeout(() => login.remove(), 1000);
-						}
 						window.dispatchEvent(new Event("app-login"));
 					} else {
 						form.classList.add("error");
 						status.textContent = "Invalid PIN Code";
 						pinInput.value = "";
 						pinInput.focus();
+						btn.disabled = false;
 					}
 				} catch (e) {
 					status.textContent = "Connection Error";
-				} finally {
 					btn.disabled = false;
 				}
 			};

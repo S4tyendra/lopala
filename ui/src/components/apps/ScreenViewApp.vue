@@ -18,7 +18,7 @@ const fetchDisplays = async () => {
       if (!selectedDisplay.value && displays.value.length > 0)
         selectedDisplay.value = displays.value[0].name
     }
-  } catch {}
+  } catch { }
 }
 
 // ─── WebGL / Three.js state (imperative, not reactive) ───────────────────────
@@ -117,7 +117,7 @@ function loadThree(): Promise<void> {
   if ((window as any).THREE) return Promise.resolve()
   return new Promise((resolve, reject) => {
     const s = document.createElement('script')
-    s.src = '/three.min.js'
+    s.src = 'https://cdn.jsdelivr.net/npm/three-js@79.0.0/three.min.js'
     s.onload = () => resolve()
     s.onerror = () => reject(new Error('Failed to load three.min.js'))
     document.head.appendChild(s)
@@ -135,8 +135,8 @@ function initGL() {
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1)
 
   uniforms = {
-    tA:       { value: null },
-    tB:       { value: null },
+    tA: { value: null },
+    tB: { value: null },
     progress: { value: 0.0 },
   }
 
@@ -209,7 +209,7 @@ const handleMsg = (e: MessageEvent) => {
       texQueue.push(tex)
       pumpQueue()
     }).catch(() => { URL.revokeObjectURL(url) })
-  } catch {}
+  } catch { }
 }
 
 const connectWs = () => {
@@ -274,15 +274,12 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="flex flex-col h-full overflow-hidden"
-    style="background:#0a0a0b; color:#c8c8d0;">
+  <div class="flex flex-col h-full overflow-hidden" style="background:#0a0a0b; color:#c8c8d0;">
 
     <!-- Header -->
-    <div class="flex-none flex items-center justify-between px-3 py-2 border-b"
-      style="border-color:#1e1e24;">
+    <div class="flex-none flex items-center justify-between px-3 py-2 border-b" style="border-color:#1e1e24;">
 
-      <select :value="selectedDisplay"
-        @change="e => (selectedDisplay = (e.target as HTMLSelectElement).value)"
+      <select :value="selectedDisplay" @change="e => (selectedDisplay = (e.target as HTMLSelectElement).value)"
         class="rounded px-2 py-1 outline-none cursor-pointer text-[12px] bg-white/5 border border-[#1e1e24] color-[#c8c8d0]">
         <option v-for="d in displays" :key="d.name" :value="d.name" style="background:#111114">
           {{ d.name }} — {{ d.description }}
@@ -295,7 +292,8 @@ onUnmounted(() => {
           ? 'border-color:rgba(239,68,68,0.5); color:#f87171'
           : 'border-color:rgba(74,222,128,0.3); color:#4ade80'">
         <span v-if="isLive" class="relative flex h-1.5 w-1.5">
-          <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style="background:#f87171"></span>
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
+            style="background:#f87171"></span>
           <span class="relative inline-flex rounded-full h-1.5 w-1.5" style="background:#ef4444"></span>
         </span>
         {{ isLive ? 'stop' : 'live' }}
@@ -308,17 +306,15 @@ onUnmounted(() => {
 
       <!-- Idle / Loading overlay -->
       <Transition name="fade">
-        <div v-if="!isLive || !isReady"
-          class="absolute inset-0 flex flex-col items-center justify-center gap-4"
+        <div v-if="!isLive || !isReady" class="absolute inset-0 flex flex-col items-center justify-center gap-4"
           style="background:rgba(0,0,0,0.88)">
-          <div v-if="isLive && !isReady"
-            class="w-7 h-7 rounded-full border-2 animate-spin"
+          <div v-if="isLive && !isReady" class="w-7 h-7 rounded-full border-2 animate-spin"
             style="border-color:#ffb300; border-top-color:transparent" />
-          <svg v-else xmlns="http://www.w3.org/2000/svg" width="46" height="46"
-            viewBox="0 0 24 24" fill="none" stroke="#2a2a38" stroke-width="0.75">
-            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-            <line x1="8" y1="21" x2="16" y2="21"/>
-            <line x1="12" y1="17" x2="12" y2="21"/>
+          <svg v-else xmlns="http://www.w3.org/2000/svg" width="46" height="46" viewBox="0 0 24 24" fill="none"
+            stroke="#2a2a38" stroke-width="0.75">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+            <line x1="8" y1="21" x2="16" y2="21" />
+            <line x1="12" y1="17" x2="12" y2="21" />
           </svg>
           <span class="text-[10px] tracking-[0.2em] uppercase" style="color:#3a3a50">
             {{ isLive ? 'waiting for first frame…' : 'press ▶ live to start' }}
@@ -343,15 +339,21 @@ onUnmounted(() => {
 
 <style scoped>
 .screenview-root {
-  display: flex; flex-direction: column; height: 100%;
-  color: #c8c8d0; background: #111114;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  color: #c8c8d0;
+  background: #111114;
 }
+
 .fade-enter-active {
   transition: opacity 350ms var(--ease-out);
 }
+
 .fade-leave-active {
   transition: opacity 250ms var(--ease-out);
 }
+
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;

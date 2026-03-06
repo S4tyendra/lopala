@@ -70,6 +70,7 @@ pub struct CanvasStroke {
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct FileStateSync {
+    pub window_id: String,
     pub path: String,
     pub selected: Vec<String>,
     pub scroll_top: f64,

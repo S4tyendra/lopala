@@ -3,7 +3,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { windows } from '../composables/useWs'
 import { spawnWindow, focusWindow, broadcastWin } from '../composables/useWindows'
 
-const APPS = [
+const APPS = ref([
   { id: 'files',    label: 'Finder',   bg: '#1a6ef5', path: '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>' },
   { id: 'terminal', label: 'Terminal', bg: '#1a1a1a', path: '<polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/>' },
   { id: 'messages', label: 'Messages', bg: '#28a745', path: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>' },
@@ -11,23 +11,23 @@ const APPS = [
   { id: 'screenshot', label: 'Screenshot', bg: '#eab308', path: '<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline>' },
   { id: 'screenview', label: 'Screen View', bg: '#0e7490', path: '<rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line><circle cx="12" cy="10" r="3"></circle>' },
   { id: 'taskmanager', label: 'Task Manager', bg: '#dc2626', path: '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>' },
-]
+])
+
+onMounted(async () => {
+  try {
+    const res = await fetch('/api/displays')
+    if (res.ok) {
+      const displays = await res.json()
+      if (!displays || displays.length === 0) {
+        APPS.value = APPS.value.filter(a => a.id !== 'screenshot' && a.id !== 'screenview')
+      }
+    }
+  } catch (err) {}
+})
 
 const hasWindow = (app: string) => Object.values(windows.value).some(w => w.app === app)
 
 const open = (id: string) => {
-  // Focus existing window of this app if it exists
-  const existingId = Object.keys(windows.value).find(k => windows.value[k].app === id)
-  if (existingId) {
-    const win = windows.value[existingId]
-    if (win.minimized) {
-       win.minimized = false
-       broadcastWin(win)
-    }
-    focusWindow(existingId)
-    return
-  }
-
   if (id === 'messages') spawnWindow('messages', { title: 'Messages', channel: 'global' })
   else if (id === 'canvas') {
     const canvasId = Math.random().toString(36).substring(7)
@@ -73,7 +73,7 @@ function getScale(appId: string) {
 const currentScales = ref<Record<string, number>>({})
 let rafId: number
 const updateScales = () => {
-  APPS.forEach(a => currentScales.value[a.id] = getScale(a.id))
+  APPS.value.forEach(a => currentScales.value[a.id] = getScale(a.id))
   rafId = requestAnimationFrame(updateScales)
 }
 onMounted(() => rafId = requestAnimationFrame(updateScales))

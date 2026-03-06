@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, computed, watch, nextTick } from 'vue'
 import {
-  globalFileState as s, initFileState, broadcastFileState,
+  getFileState, initFileState, broadcastFileState,
   loadFiles, openEntry, renameFile, deleteFiles, copyFiles, moveFiles,
   fileIcon, fileSizeHuman, formatDate,
 } from '../../composables/useFiles'
@@ -9,16 +9,18 @@ import { spawnWindow, focusWindow, nextZ } from '../../composables/useWindows'
 import { currentWorkspace, wsSend, windows } from '../../composables/useWs'
 import FileUploader from './FileUploader.vue'
 
-onMounted(() => initFileState())
-onUnmounted(() => { if (s.value) s.value.contextMenu = null })
-
+const props = defineProps<{ winId: string }>()
+const s = computed(() => getFileState(props.winId))
 const showUploader = ref(false)
+
+onMounted(() => initFileState(props.winId))
+onUnmounted(() => { if (s.value) s.value.contextMenu = null })
 
 // ── Navigation ────────────────────────────────────────────────────────────────
 const goUp = () => {
   const p = s.value.path
   const parent = p === '/' ? '/' : p.split('/').slice(0, -1).join('/') || '/'
-  loadFiles(parent)
+  loadFiles(props.winId, parent)
 }
 
 // ── Scroll Sync ───────────────────────────────────────────────────────────────
@@ -50,7 +52,7 @@ const toggleSelect = (e: MouseEvent, path: string) => {
   } else {
     s.value.selected = new Set([path])
   }
-  broadcastFileState()
+  broadcastFileState(props.winId)
 }
 const selectedPaths = computed(() => s.value ? Array.from(s.value.selected) : [])
 
@@ -62,7 +64,7 @@ const openContextMenu = (e: MouseEvent, entry: any | null) => {
   if (!s.value) return
   if (entry && !s.value.selected.has(entry.path)) {
     s.value.selected = new Set([entry.path])
-    broadcastFileState()
+    broadcastFileState(props.winId)
   }
   s.value.contextMenu = { x: e.clientX, y: e.clientY, entry }
 }
@@ -80,7 +82,7 @@ onUnmounted(() => document.removeEventListener('click', onDocClick, true))
 // ── Operations ────────────────────────────────────────────────────────────────
 const open = async (entry: any) => {
   if (entry.is_dir) {
-    await loadFiles(entry.path)
+    await loadFiles(props.winId, entry.path)
     return
   }
 
@@ -123,21 +125,21 @@ const open = async (entry: any) => {
       })
     }
   } else {
-    await openEntry(entry)
+    await openEntry(props.winId, entry)
   }
 }
 
 const copy = () => {
   if (!s.value) return
   s.value.clipboard = { op: 'copy', paths: selectedPaths.value }
-  broadcastFileState()
+  broadcastFileState(props.winId)
   closeContextMenu()
 }
 
 const cut = () => {
   if (!s.value) return
   s.value.clipboard = { op: 'cut', paths: selectedPaths.value }
-  broadcastFileState()
+  broadcastFileState(props.winId)
   closeContextMenu()
 }
 
@@ -145,11 +147,11 @@ const paste = async () => {
   if (!s.value?.clipboard) return
   const { op, paths } = s.value.clipboard
   const dest = s.value.path
-  if (op === 'copy') await copyFiles(paths, dest)
-  else await moveFiles(paths, dest)
+  if (op === 'copy') await copyFiles(props.winId, paths, dest)
+  else await moveFiles(props.winId, paths, dest)
   if (op === 'cut') {
     s.value.clipboard = null
-    broadcastFileState()
+    broadcastFileState(props.winId)
   }
   closeContextMenu()
 }
@@ -160,9 +162,9 @@ const doDelete = async () => {
   if (!paths.length) return
   const names = paths.map(p => p.split('/').pop()).join(', ')
   if (!confirm(`Delete ${names}?`)) return
-  await deleteFiles(paths)
+  await deleteFiles(props.winId, paths)
   s.value.selected = new Set()
-  broadcastFileState()
+  broadcastFileState(props.winId)
   closeContextMenu()
 }
 
@@ -170,7 +172,7 @@ const startRename = () => {
   if (!s.value?.contextMenu?.entry) return
   const entry = s.value.contextMenu.entry
   s.value.renaming = { path: entry.path, name: entry.name }
-  broadcastFileState()
+  broadcastFileState(props.winId)
   closeContextMenu()
   
   // auto focus input on next tick
@@ -183,7 +185,7 @@ const startRename = () => {
 const onRenameInput = (e: Event) => {
   if (s.value?.renaming) {
     s.value.renaming.name = (e.target as HTMLInputElement).value
-    broadcastFileState() // Live typig sync!
+    broadcastFileState(props.winId) // Live typig sync!
   }
 }
 
@@ -191,9 +193,9 @@ const commitRename = async () => {
   if (!s.value?.renaming) return
   const { path, name } = s.value.renaming
   s.value.renaming = null
-  broadcastFileState()
+  broadcastFileState(props.winId)
   const origName = path.split('/').pop()!
-  if (name !== origName && name.trim()) await renameFile(path, name.trim())
+  if (name !== origName && name.trim()) await renameFile(props.winId, path, name.trim())
 }
 
 const downloadEntry = (path: string) => {
@@ -286,7 +288,7 @@ const previewEntry = computed(() => {
       <!-- Breadcrumb -->
       <div class="flex items-center gap-1 flex-1 overflow-hidden text-[11px]" style="color:rgba(255,255,255,0.35)">
         <template v-for="(part, i) in pathParts" :key="part.path">
-          <button @click.stop="loadFiles(part.path)" class="hover:brightness-150 transition-[filter] duration-100 truncate max-w-[80px]">{{ part.name }}</button>
+          <button @click.stop="loadFiles(props.winId, part.path)" class="hover:brightness-150 transition-[filter] duration-100 truncate max-w-[80px]">{{ part.name }}</button>
           <span v-if="i < pathParts.length - 1" class="opacity-40">/</span>
         </template>
       </div>
@@ -295,7 +297,7 @@ const previewEntry = computed(() => {
       <div v-if="s.clipboard" class="flex items-center gap-1.5 text-[10px] px-2.5 py-1 rounded-full shadow-lg border border-[#fb923c]/30" style="background:rgba(251,146,60,0.15);color:#fb923c">
         <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
         <span class="font-bold tracking-tight">{{ s.clipboard.paths.length }} item{{ s.clipboard.paths.length > 1 ? 's' : '' }}</span>
-        <button @click.stop="s.clipboard = null; broadcastFileState()" class="opacity-60 hover:opacity-100 ml-1 transition-opacity">
+        <button @click.stop="s.clipboard = null; broadcastFileState(props.winId)" class="opacity-60 hover:opacity-100 ml-1 transition-opacity">
           <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
         </button>
       </div>
@@ -328,7 +330,7 @@ const previewEntry = computed(() => {
       <!-- File list -->
       <div ref="listEl" :class="['overflow-y-auto', s.preview ? 'w-[55%]' : 'flex-1']" 
         @scroll="onScroll"
-        @click.stop="s.selected = new Set(); broadcastFileState()" 
+        @click.stop="s.selected = new Set(); broadcastFileState(props.winId)" 
         @contextmenu.prevent="openContextMenu($event, null)">
 
         <!-- Loading -->
@@ -338,7 +340,7 @@ const previewEntry = computed(() => {
         <div v-else-if="s.viewMode === 'grid'" class="p-3 grid gap-2 content-start" style="grid-template-columns: repeat(auto-fill, minmax(80px, 1fr))">
           <div v-for="entry in s.entries" :key="entry.path"
             @click.stop="toggleSelect($event, entry.path)"
-            @dblclick.stop="openEntry(entry)"
+            @dblclick.stop="openEntry(props.winId, entry)"
             @contextmenu.stop.prevent="openContextMenu($event, entry)"
             :style="s.selected.has(entry.path)
               ? 'background:rgba(96,165,250,0.2);outline:1.5px solid rgba(96,165,250,0.5);'
@@ -353,7 +355,7 @@ const previewEntry = computed(() => {
               :value="s.renaming.name"
               @input="onRenameInput"
               @keyup.enter="commitRename"
-              @keyup.escape="s.renaming = null; broadcastFileState()"
+              @keyup.escape="s.renaming = null; broadcastFileState(props.winId)"
               @blur="commitRename"
               @click.stop
               class="text-center text-[10px] w-full rounded px-1 outline-none"
@@ -374,7 +376,7 @@ const previewEntry = computed(() => {
           </div>
           <div v-for="entry in s.entries" :key="entry.path"
             @click.stop="toggleSelect($event, entry.path)"
-            @dblclick.stop="openEntry(entry)"
+            @dblclick.stop="openEntry(props.winId, entry)"
             @contextmenu.stop.prevent="openContextMenu($event, entry)"
             :style="s.selected.has(entry.path)
               ? 'background:rgba(96,165,250,0.18)'
@@ -389,7 +391,7 @@ const previewEntry = computed(() => {
               id="rename-input"
               :value="s.renaming.name"
               @input="onRenameInput"
-              @keyup.enter="commitRename" @keyup.escape="s.renaming = null; broadcastFileState()" @blur="commitRename" @click.stop
+              @keyup.enter="commitRename" @keyup.escape="s.renaming = null; broadcastFileState(props.winId)" @blur="commitRename" @click.stop
               class="flex-1 text-[12px] rounded px-1 outline-none"
               style="background:rgba(96,165,250,0.2);color:white;border:1px solid #60a5fa" />
 
@@ -405,7 +407,7 @@ const previewEntry = computed(() => {
           <span class="text-[11px] truncate" style="color:rgba(255,255,255,0.4)">{{ s.preview.path.split('/').pop() }}</span>
           <div class="flex items-center gap-2 shrink-0 ml-2">
             <a :href="mimeToUrl(s.preview.path)" download class="text-[10px] hover:brightness-125 transition" style="color:#60a5fa">⬇ Save</a>
-            <button @click="s.preview = null; broadcastFileState()" class="text-[10px] opacity-40 hover:opacity-80">✕</button>
+            <button @click="s.preview = null; broadcastFileState(props.winId)" class="text-[10px] opacity-40 hover:opacity-80">✕</button>
           </div>
         </div>
         <div class="flex-1 overflow-auto bg-[#0a0a0c]">
@@ -440,7 +442,7 @@ const previewEntry = computed(() => {
         @click.stop>
 
         <template v-if="s.contextMenu.entry">
-          <button @click="openEntry(s.contextMenu.entry)" class="ctx-item">
+          <button @click="openEntry(props.winId, s.contextMenu.entry)" class="ctx-item">
             <span class="opacity-60" v-html="fileIcon(s.contextMenu.entry)"></span>
             {{ s.contextMenu.entry.is_dir ? 'Open Folder' : 'View Content' }}
           </button>
@@ -491,7 +493,7 @@ const previewEntry = computed(() => {
              <span class="opacity-60"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg></span>
              Open Terminal Here
           </button>
-          <button @click="loadFiles(s.path)" class="ctx-item">
+          <button @click="loadFiles(props.winId, s.path)" class="ctx-item">
              <span class="opacity-60"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></span>
              Refresh Listing
           </button>
@@ -509,7 +511,7 @@ const previewEntry = computed(() => {
         >
           <FileUploader
             :dest-dir="s.path"
-            @done="loadFiles(s.path)"
+            @done="loadFiles(props.winId, s.path)"
             @close="showUploader = false"
           />
         </div>

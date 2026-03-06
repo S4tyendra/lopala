@@ -17,6 +17,7 @@ export interface FileState {
 }
 
 export interface FileStateSync {
+  window_id: string
   path: string
   selected: string[]
   scroll_top: number
@@ -28,34 +29,43 @@ export interface FileStateSync {
   sender: string
 }
 
-export const globalFileState = ref<FileState>({
-  path: '/home',
-  entries: [],
-  loading: false,
-  selected: new Set(),
-  clipboard: null,
-  preview: null,
-  viewMode: 'grid',
-  contextMenu: null,
-  scrollTop: 0,
-  renaming: null,
-  version: 0,
-})
+export const fileStates = ref<Record<string, FileState>>({})
+
+export function getFileState(winId: string) {
+  if (!fileStates.value[winId]) {
+    fileStates.value[winId] = {
+      path: '/home',
+      entries: [],
+      loading: false,
+      selected: new Set(),
+      clipboard: null,
+      preview: null,
+      viewMode: 'grid',
+      contextMenu: null,
+      scrollTop: 0,
+      renaming: null,
+      version: 0,
+    }
+  }
+  return fileStates.value[winId]
+}
 
 let isApplyingRemoteSync = false
 
-export function bumpVersion() {
-  globalFileState.value.version++
+export function bumpVersion(winId: string) {
+  getFileState(winId).version++
 }
 
-export function initFileState() {
-  loadFiles(globalFileState.value.path, true)
+export function initFileState(winId: string) {
+  const s = getFileState(winId)
+  loadFiles(winId, s.path, true)
 }
 
-export function broadcastFileState() {
+export function broadcastFileState(winId: string) {
   if (isApplyingRemoteSync) return
-  const s = globalFileState.value
+  const s = getFileState(winId)
   const sync: FileStateSync = {
+    window_id: winId,
     path: s.path,
     selected: Array.from(s.selected),
     scroll_top: s.scrollTop,
@@ -74,11 +84,11 @@ export async function applyRemoteFileState(sync: FileStateSync) {
   if (sync.sender === myId.value) return
 
   isApplyingRemoteSync = true
-  const s = globalFileState.value
+  const s = getFileState(sync.window_id)
 
   // Path changed OR version increased (mutation) — fetch new listing first
   if (s.path !== sync.path || sync.version > s.version) {
-    await _fetchAndSetEntries(sync.path)
+    await _fetchAndSetEntries(sync.window_id, sync.path)
   }
 
   s.version = sync.version
@@ -94,7 +104,7 @@ export async function applyRemoteFileState(sync: FileStateSync) {
   if (sync.preview_path) {
     if (s.preview?.path !== sync.preview_path) {
       const entry = s.entries.find(e => e.path === sync.preview_path)
-      if (entry) await openEntry(entry, true)
+      if (entry) await openEntry(sync.window_id, entry, true)
     }
   } else {
     s.preview = null
@@ -104,8 +114,8 @@ export async function applyRemoteFileState(sync: FileStateSync) {
 }
 
 // Internal: fetch entries and set path — does NOT touch selection/scroll/etc
-async function _fetchAndSetEntries(path: string) {
-  const s = globalFileState.value
+async function _fetchAndSetEntries(winId: string, path: string) {
+  const s = getFileState(winId)
   s.path = path
   s.loading = true
   try {
@@ -124,27 +134,27 @@ async function _fetchAndSetEntries(path: string) {
 }
 
 // Public: full navigation — resets selection, broadcasts to all peers
-export async function loadFiles(path: string, localOnly = false) {
-  const s = globalFileState.value
+export async function loadFiles(winId: string, path: string, localOnly = false) {
+  const s = getFileState(winId)
   s.selected = new Set()
   s.preview = null
   s.contextMenu = null
   s.scrollTop = 0
   s.renaming = null
 
-  await _fetchAndSetEntries(path)
+  await _fetchAndSetEntries(winId, path)
 
   // Broadcast AFTER entries are loaded so peers get the full new path
-  if (!localOnly) broadcastFileState()
+  if (!localOnly) broadcastFileState(winId)
 }
 
-export async function openEntry(entry: FileEntry, localOnly = false) {
+export async function openEntry(winId: string, entry: FileEntry, localOnly = false) {
   if (entry.is_dir) {
-    await loadFiles(entry.path)   // always broadcasts
+    await loadFiles(winId, entry.path)   // always broadcasts
     return
   }
 
-  const s = globalFileState.value
+  const s = getFileState(winId)
   const m = entry.mime
   let content = ''
 
@@ -160,10 +170,10 @@ export async function openEntry(entry: FileEntry, localOnly = false) {
   }
 
   s.preview = { path: entry.path, content }
-  if (!localOnly) broadcastFileState()
+  if (!localOnly) broadcastFileState(winId)
 }
 
-export async function renameFile(oldPath: string, newName: string) {
+export async function renameFile(winId: string, oldPath: string, newName: string) {
   try {
     const res = await fetch('/api/files/rename', {
       method: 'POST',
@@ -171,13 +181,12 @@ export async function renameFile(oldPath: string, newName: string) {
       body: JSON.stringify({ path: oldPath, name: newName }),
     })
     if (!res.ok) throw new Error(await res.text())
-    bumpVersion()
-    // Reload current dir and broadcast immediately — fixes "stuck at old name" for peers
-    await loadFiles(globalFileState.value.path)
+    bumpVersion(winId)
+    await loadFiles(winId, getFileState(winId).path)
   } catch (e) { alert(`Rename failed: ${e}`) }
 }
 
-export async function deleteFiles(paths: string[]) {
+export async function deleteFiles(winId: string, paths: string[]) {
   await Promise.all(paths.map(path =>
     fetch('/api/files/delete', {
       method: 'POST',
@@ -185,11 +194,11 @@ export async function deleteFiles(paths: string[]) {
       body: JSON.stringify({ path }),
     }).catch(() => {})
   ))
-  bumpVersion()
-  await loadFiles(globalFileState.value.path)
+  bumpVersion(winId)
+  await loadFiles(winId, getFileState(winId).path)
 }
 
-export async function copyFiles(paths: string[], destDir: string) {
+export async function copyFiles(winId: string, paths: string[], destDir: string) {
   await Promise.all(paths.map(path => {
     const name = path.split('/').pop()!
     return fetch('/api/files/copy', {
@@ -198,11 +207,11 @@ export async function copyFiles(paths: string[], destDir: string) {
       body: JSON.stringify({ from: path, to: `${destDir}/${name}` }),
     }).catch(() => {})
   }))
-  bumpVersion()
-  await loadFiles(globalFileState.value.path)
+  bumpVersion(winId)
+  await loadFiles(winId, getFileState(winId).path)
 }
 
-export async function moveFiles(paths: string[], destDir: string) {
+export async function moveFiles(winId: string, paths: string[], destDir: string) {
   await Promise.all(paths.map(path => {
     const name = path.split('/').pop()!
     return fetch('/api/files/move', {
@@ -211,8 +220,8 @@ export async function moveFiles(paths: string[], destDir: string) {
       body: JSON.stringify({ from: path, to: `${destDir}/${name}` }),
     }).catch(() => {})
   }))
-  bumpVersion()
-  await loadFiles(globalFileState.value.path)
+  bumpVersion(winId)
+  await loadFiles(winId, getFileState(winId).path)
 }
 
 export function fileIcon(entry: FileEntry): string {
