@@ -60,7 +60,7 @@ const toggleHideHelp = () => {
             <div class="text-[13px] font-bold text-blue-300">GitHub Repo</div>
             <div class="text-[11px] text-blue-300/70 mt-0.5">Star the project! ★</div>
           </a>
-          <a href="https://satyendra.com/blog/why-i-built-lopala" target="_blank" rel="noopener noreferrer"
+          <a href="https://satyendra.in/blog/why-i-built-lopala" target="_blank" rel="noopener noreferrer"
             class="flex-1 p-4 rounded-2xl bg-purple-500/15 border border-purple-400/20 text-center hover:bg-purple-500/25 transition-all active:scale-95 duration-200 group">
             <div class="text-[13px] font-bold text-purple-300">Developer Blog</div>
             <div class="text-[11px] text-purple-300/70 mt-0.5">Read the deep dives</div>
