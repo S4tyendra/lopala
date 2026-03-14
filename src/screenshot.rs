@@ -1,8 +1,8 @@
-use axum::{response::IntoResponse, Json, http::StatusCode};
+use axum::{Json, http::StatusCode, response::IntoResponse};
 use serde::{Deserialize, Serialize};
 use std::process::Command;
-use tracing::{error, info};
 use std::time::{SystemTime, UNIX_EPOCH};
+use tracing::{error, info};
 
 #[derive(Serialize)]
 pub struct DisplayInfo {
@@ -21,7 +21,10 @@ pub async fn get_displays() -> impl IntoResponse {
                     for m in arr {
                         let name = m["name"].as_str().unwrap_or("").to_string();
                         let desc = m["description"].as_str().unwrap_or(&name).to_string();
-                        displays.push(DisplayInfo { name, description: desc });
+                        displays.push(DisplayInfo {
+                            name,
+                            description: desc,
+                        });
                     }
                 }
             }
@@ -30,14 +33,22 @@ pub async fn get_displays() -> impl IntoResponse {
 
     // 2. Try swaymsg (if hyprctl failed)
     if displays.is_empty() {
-        if let Ok(out) = Command::new("swaymsg").arg("-t").arg("get_outputs").arg("-r").output() {
+        if let Ok(out) = Command::new("swaymsg")
+            .arg("-t")
+            .arg("get_outputs")
+            .arg("-r")
+            .output()
+        {
             if out.status.success() {
                 if let Ok(json) = serde_json::from_slice::<serde_json::Value>(&out.stdout) {
                     if let Some(arr) = json.as_array() {
                         for m in arr {
                             let name = m["name"].as_str().unwrap_or("").to_string();
                             let desc = m["make"].as_str().unwrap_or(&name).to_string();
-                            displays.push(DisplayInfo { name, description: desc });
+                            displays.push(DisplayInfo {
+                                name,
+                                description: desc,
+                            });
                         }
                     }
                 }
@@ -53,7 +64,11 @@ pub async fn get_displays() -> impl IntoResponse {
                 let status_path = path.join("status");
                 if let Ok(status) = std::fs::read_to_string(status_path) {
                     if status.trim() == "connected" {
-                        let dir_name = path.file_name().unwrap_or_default().to_string_lossy().into_owned();
+                        let dir_name = path
+                            .file_name()
+                            .unwrap_or_default()
+                            .to_string_lossy()
+                            .into_owned();
                         let mut parts = dir_name.splitn(2, '-');
                         parts.next(); // Skip "card0" etc
                         if let Some(name) = parts.next() {
@@ -77,10 +92,13 @@ pub struct TakeScreenshotReq {
 }
 
 pub async fn take_screenshot(Json(req): Json<TakeScreenshotReq>) -> impl IntoResponse {
-    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
     let dir = format!("/tmp/lopala/screenshots/{}", req.display);
     std::fs::create_dir_all(&dir).unwrap_or_default();
-    
+
     let path = format!("{}/{}.png", dir, now);
     let output = Command::new("grim")
         .arg("-o")
@@ -89,7 +107,7 @@ pub async fn take_screenshot(Json(req): Json<TakeScreenshotReq>) -> impl IntoRes
         .arg("png")
         .arg(&path)
         .output();
-        
+
     match output {
         Ok(out) if out.status.success() => {
             info!("Screenshot saved to {}", path);

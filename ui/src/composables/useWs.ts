@@ -22,9 +22,15 @@ export const canvasHistory = ref<Record<string, CanvasStroke[]>>({})
 
 // ─── Light user color palette (readable on dark + white canvas) ───────────────
 export const USER_COLORS = [
-  '#60a5fa', '#34d399', '#fb923c', '#f472b6',
-  '#a78bfa', '#facc15', '#22d3ee', '#f87171',
-]
+  "#60a5fa", "#34d399", "#fb923c", "#f472b6",
+  "#a78bfa", "#facc15", "#22d3ee", "#f87171",
+
+  "#93c5fd", "#6ee7b7", "#fdba74", "#f9a8d4",
+  "#c4b5fd", "#fde047", "#67e8f9", "#fca5a5",
+
+  "#bae6fd", "#bbf7d0", "#fed7aa", "#fbcfe8",
+  "#ddd6fe", "#fef08a", "#a5f3fc", "#fecaca",
+];
 
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -70,7 +76,7 @@ export function connectWs(onEvent: (msg: any) => void, callbacks?: { onOpen?: ()
         return
       }
       onEvent(msg)
-    } catch {}
+    } catch { }
   }
 
   socket.onclose = () => {

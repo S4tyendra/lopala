@@ -15,11 +15,24 @@ mod screencast;
 mod search;
 mod upload;
 mod system;
+mod update;
 
+
+fn parse_pin(s: &str) -> Result<String, String> {
+    if s.len() == 4 && s.chars().all(char::is_numeric) {
+        Ok(s.to_string())
+    } else {
+        Err("PIN must be exactly 4 numeric digits".to_string())
+    }
+}
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
+    /// Update Lopala to the latest release
+    #[arg(long)]
+    update: bool,
+
     /// Port to listen on. If omitted, defaults to 8080 (or a random 40000-60000 port if --tunnel is set).
     #[arg(short, long)]
     port: Option<u16>,
@@ -29,7 +42,7 @@ struct Args {
     tunnel: bool,
 
     /// 4-digit PIN for authentication. If not provided, one is generated.
-    #[arg(long)]
+    #[arg(long, value_parser = parse_pin)]
     pin: Option<String>,
 
     /// Limit max concurrent users
@@ -48,6 +61,19 @@ async fn main() -> anyhow::Result<()> {
 
     // 2. Parse CLI Arguments
     let args = Args::parse();
+    
+    if args.update {
+        if let Err(e) = update::check_and_update(true).await {
+            eprintln!("{}", e);
+            std::process::exit(1);
+        }
+        std::process::exit(0);
+    }
+
+    // Check for updates in the background on normal startup
+    tokio::spawn(async {
+        let _ = update::check_and_update(false).await;
+    });
     
     let port = args.port.unwrap_or_else(|| {
         if args.tunnel {

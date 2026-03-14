@@ -17,9 +17,7 @@ use tokio::sync::RwLock;
 use tracing::{info, warn};
 use uuid::Uuid;
 
-// ─────────────────────────────────────────
 //  Session type
-// ─────────────────────────────────────────
 
 #[derive(Debug)]
 pub struct UploadSession {
@@ -34,9 +32,7 @@ pub struct UploadSession {
     pub complete: bool,
 }
 
-// ─────────────────────────────────────────
 //  Shared state (injected into Axum state)
-// ─────────────────────────────────────────
 
 pub type UploadSessions = Arc<RwLock<HashMap<String, UploadSession>>>;
 
@@ -68,9 +64,7 @@ pub async fn start_cleanup_task(sessions: UploadSessions) {
     });
 }
 
-// ─────────────────────────────────────────
 //  Request / Response types
-// ─────────────────────────────────────────
 
 const CHUNK_SIZE: u64 = 10 * 1024 * 1024; // 10 MiB
 
@@ -100,9 +94,7 @@ pub struct UploadQuery {
     pub process: Option<String>,
 }
 
-// ─────────────────────────────────────────
 //  Handlers
-// ─────────────────────────────────────────
 
 /// POST /files/upload/init
 ///

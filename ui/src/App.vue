@@ -23,9 +23,9 @@ import {
   myId, myName, myColor, windows, users, chats,
   channels, currentWorkspace, workspaceCount, wsSend, connectWs, canvasHistory,
 } from './composables/useWs'
-import { 
+import {
   visibleWindows, sortedWindows, onDragMove, onDragEnd, focusWindow, nextZ, syncZTop, minimizedSlots,
-  spawnWindow 
+  spawnWindow
 } from './composables/useWindows'
 import { checkAndInitTerminals, writeToTerminal, disposeTerminal } from './composables/useTerminals'
 import { initFileState, loadFiles, applyRemoteFileState } from './composables/useFiles'
@@ -61,7 +61,7 @@ const handleEvent = (msg: any) => {
       workspaceCount.value = s.workspace_count
       canvasHistory.value = s.canvas_strokes ?? {}
       if (s.users[myId.value]) myColor.value = s.users[myId.value].color
-      
+
       nextTick(() => {
         checkAndInitTerminals(currentWorkspace.value)
         // Show help every time user unlocks/connects unless disabled
@@ -243,7 +243,8 @@ onUnmounted(() => {
 
     <!-- Windows layer -->
     <div class="absolute inset-0 top-7 bottom-20">
-      <WindowFrame v-for="win in sortedWindows" :key="win.id" :win="win" v-show="win.workspace === currentWorkspace" @mousedown="focusWindow(win.id)">
+      <WindowFrame v-for="win in sortedWindows" :key="win.id" :win="win" v-show="win.workspace === currentWorkspace"
+        @mousedown="focusWindow(win.id)">
         <TerminalApp v-if="win.app === 'terminal'" :win-id="win.id" />
         <FilesApp v-else-if="win.app === 'files'" :win-id="win.id" />
         <MessagesApp v-else-if="win.app === 'messages'" :win-id="win.id" :channel="win.channel ?? 'global'"
@@ -272,15 +273,12 @@ onUnmounted(() => {
 </template>
 
 <style>
-/* ── Samsung emoji font ─────────────────────────────────────────────────────── */
-
 *,
 *::before,
 *::after {
   box-sizing: border-box;
 }
 
-/* Emoji elements use Samsung font first via global.css */
 .emoji,
 [data-emoji] {
   font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', emoji;

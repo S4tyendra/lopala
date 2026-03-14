@@ -1,10 +1,9 @@
-use nix::pty::{forkpty, Winsize};
-use nix::unistd::{ForkResult};
-use std::os::unix::io::{OwnedFd, AsRawFd};
-use tracing::{info, error};
+use nix::pty::{Winsize, forkpty};
+use nix::unistd::ForkResult;
+use std::os::unix::io::{AsRawFd, OwnedFd};
+use tracing::{error, info};
 
-/// THE DIRTY OS-LEVEL SHIT: forkpty, ioctl, and SIGWINCH handling.
-/// This is where the magic happens/everything breaks.
+/// OS-LEVEL SHIT: forkpty, ioctl, and SIGWINCH handling.
 pub struct Pty {
     pub fd: OwnedFd,
     pub pid: nix::unistd::Pid,
@@ -25,7 +24,10 @@ impl Pty {
             Ok(fork_result) => match fork_result.fork_result {
                 ForkResult::Parent { child: pid } => {
                     info!("Spawned PTY child process PID: {}", pid);
-                    Ok(Pty { fd: fork_result.master, pid })
+                    Ok(Pty {
+                        fd: fork_result.master,
+                        pid,
+                    })
                 }
                 ForkResult::Child => {
                     let c_shell = std::ffi::CString::new(shell).unwrap();

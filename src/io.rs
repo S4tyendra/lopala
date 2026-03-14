@@ -50,7 +50,7 @@ impl AsyncRead for AsyncPty {
                     return Poll::Ready(Ok(()));
                 }
                 Ok(Err(err)) => return Poll::Ready(Err(err)),
-                Err(_would_block) => continue, // Reactor says EAGAIN, we retry via poll_read_ready loop
+                Err(_would_block) => continue, // Reactor says EAGAIN, retry via poll_read_ready loop
             }
         }
     }
