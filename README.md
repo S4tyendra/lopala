@@ -60,7 +60,7 @@ As of building this, there are no known CVEs for the libraries and dependencies 
 
 MIT — **Do whatever you like.** I don't care, and I can't guarantee anything.
 
-See the [LICENSE](https://www.google.com/search?q=LICENSE) file for more information. (Provided "AS IS" without warranty of any kind).
+See the [LICENSE](/LICENSE) file for more information. (Provided "AS IS" without warranty of any kind).
 
 ## 🤍 Support the Project
 
