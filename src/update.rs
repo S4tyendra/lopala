@@ -12,8 +12,8 @@ struct GithubRelease {
 }
 
 pub async fn check_and_update(force_update: bool) -> anyhow::Result<()> {
-    let repo = "s4tyendra/lopala";
-    let client = reqwest::Client::builder().user_agent("lopala-updater").build()?;
+    let repo = "s4tyendra/latch";
+    let client = reqwest::Client::builder().user_agent("latch-updater").build()?;
     let url = format!("https://api.github.com/repos/{}/releases/latest", repo);
     
     let resp = client.get(&url).send().await.map_err(|e| anyhow::anyhow!("Could not reach GitHub API: {}", e))?;
@@ -40,8 +40,8 @@ pub async fn check_and_update(force_update: bool) -> anyhow::Result<()> {
         let os = env::consts::OS;
         
         let binary_name = match (os, arch) {
-            ("linux", "x86_64") => "lopala-linux-x64",
-            ("linux", "aarch64") => "lopala-linux-arm64",
+            ("linux", "x86_64") => "latch-linux-x64",
+            ("linux", "aarch64") => "latch-linux-arm64",
             _ => anyhow::bail!("Error: Unsupported architecture: {}", arch),
         };
         
@@ -58,7 +58,7 @@ pub async fn check_and_update(force_update: bool) -> anyhow::Result<()> {
             anyhow::bail!("Error: Downloaded file is suspiciously small ({} bytes). Aborting.", binary_bytes.len());
         }
         
-        let tmp_path = format!("/tmp/lopala.{}", Uuid::new_v4());
+        let tmp_path = format!("/tmp/latch.{}", Uuid::new_v4());
         fs::write(&tmp_path, &binary_bytes)?;
         fs::set_permissions(&tmp_path, fs::Permissions::from_mode(0o755))?;
         
@@ -81,11 +81,11 @@ pub async fn check_and_update(force_update: bool) -> anyhow::Result<()> {
         // Also ensure +x on dest via sudo chmod +x
         let _ = Command::new("sudo").arg("chmod").arg("+x").arg(dest.as_ref()).status();
         
-        println!("✅ Lopala {} installed successfully.", latest_tag);
+        println!("✅ Latch {} installed successfully.", latest_tag);
     } else {
         if latest_tag != current_ver {
-            println!("🔔 A new version of Lopala is available: {} (current: {})", latest_tag, current_ver);
-            println!("   Run 'lopala --update' to upgrade.\n");
+            println!("🔔 A new version of Latch is available: {} (current: {})", latest_tag, current_ver);
+            println!("   Run 'latch --update' to upgrade.\n");
         }
     }
     

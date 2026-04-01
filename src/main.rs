@@ -29,7 +29,7 @@ fn parse_pin(s: &str) -> Result<String, String> {
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    /// Update Lopala to the latest release
+    /// Update Latch to the latest release
     #[arg(long)]
     update: bool,
 
@@ -91,19 +91,19 @@ async fn main() -> anyhow::Result<()> {
         format!("{:04}", p)
     });
 
-    info!("Starting Lopala Terminal Server...");
+    info!("Starting Latch Terminal Server...");
     info!("===================================");
     info!(" AUTH PIN: {}", pin);
     info!("===================================");
 
     // Clean the ephemeral live-stream dir on every startup
-    let live_dir = "/tmp/lopala/live";
+    let live_dir = "/tmp/latch/live";
     let _ = std::fs::remove_dir_all(live_dir);
     std::fs::create_dir_all(live_dir).unwrap_or_default();
     info!("Cleared live stream dir: {}", live_dir);
 
     // Ephemeral bin directory for injected CLI tools (inherits to all PTYs)
-    let bin_dir = "/tmp/lopala/bin";
+    let bin_dir = "/tmp/latch/bin";
     std::fs::create_dir_all(bin_dir).unwrap_or_default();
     let wdl_path = format!("{}/wdl", bin_dir);
     let wdl_script = r#"#!/usr/bin/env bash
@@ -149,7 +149,7 @@ printf "\033]999;DOWNLOAD;%s\007" "$REAL_PATH"
     };
 
     // 4. Start HTTP Server (with graceful CTRL-C cleanup)
-    info!("Lopala UI ready at http://localhost:{}", port);
+    info!("Latch UI ready at http://localhost:{}", port);
     
     if args.max_users > 10 {
         tracing::warn!("WARNING: max_users is {}; setting it >10 will degrade performance.", args.max_users);

@@ -139,7 +139,7 @@ async fn auth_middleware(
         if let Ok(cookie_str) = cookie_val.to_str() {
             for cookie in cookie_str.split(';') {
                 let parts: Vec<&str> = cookie.trim().splitn(2, '=').collect();
-                if parts.len() == 2 && parts[0] == "lopala_pin" {
+                if parts.len() == 2 && parts[0] == "latch_pin" {
                     if parts[1] == state.pin {
                         authed = true;
                     }

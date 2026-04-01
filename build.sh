@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-echo "→ Building Lopala OS UI Payload..."
+echo "→ Building Latch OS UI Payload..."
 cd ui && bun run build && cd ..
 
 echo "→ Building Target: x86_64 (AMD/Intel)"

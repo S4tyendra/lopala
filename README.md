@@ -1,10 +1,10 @@
-# Lopala
+# Latch
 
 A zero-config, real-time Web Operating System that drops onto your local machine and securely exposes a full desktop/terminal experience over the web.
 
-Technical details on why it exists: [satyendra.in/blog/why-i-built-lopala](https://satyendra.in/blog/why-i-built-lopala)
+Technical details on why it exists: [satyendra.in/blog/why-i-built-latch](https://satyendra.in/blog/why-i-built-latch)
 
-[Lopala DEMO](https://github.com/user-attachments/assets/0c08697f-8150-4f20-80dc-eb1f046f8dc0)
+[Latch DEMO](https://github.com/user-attachments/assets/0c08697f-8150-4f20-80dc-eb1f046f8dc0)
 
 
 ## Drop It In (Installation)
@@ -12,23 +12,23 @@ Technical details on why it exists: [satyendra.in/blog/why-i-built-lopala](https
 The easiest way to get it running:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/s4tyendra/lopala/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/s4tyendra/latch/main/install.sh | bash
 ````
 
 **Manual / Binary Release:**
 Alternatively, grab the static binary for your architecture directly from the **Releases** page:
 
 ```bash
-chmod +x lopala
-sudo mv lopala /usr/bin/
-lopala
+chmod +x latch
+sudo mv latch /usr/bin/
+latch
 ```
 
 ## Usage & Flags
 
-Just run `lopala` to start the server. Need to bypass a firewall? Use the tunnel.
+Just run `latch` to start the server. Need to bypass a firewall? Use the tunnel.
 
-  - `--tunnel`: Instantly exposes Lopala to the public internet via Cloudflare. Auto-downloads `cloudflared` securely if it's not present on your system.
+  - `--tunnel`: Instantly exposes Latch to the public internet via Cloudflare. Auto-downloads `cloudflared` securely if it's not present on your system.
   - `--port <PORT>`: The local port to bind and listen on. Defaults to `8080`. (If using `--tunnel` without a port, it picks a random ephemeral port between `40000` and `60000`).
   - `--max-users`: Maximum concurrent users allowed in the session at once. Defaults to `10`.
 
@@ -44,7 +44,7 @@ Just run `lopala` to start the server. Need to bypass a firewall? Use the tunnel
 
 ## Why for DevOps?
 
-Lopala gives you a zero-configuration web GUI, a fully integrated PTY terminal, live task manager, and file editor over *any* headless server. It's incredibly useful for homelabs, remote infrastructure troubleshooting, acting as a drop-in emergency dashboard over a tunnel when native SSH acts up, or just letting your senior dev securely jump in to fix your broken environment.
+Latch gives you a zero-configuration web GUI, a fully integrated PTY terminal, live task manager, and file editor over *any* headless server. It's incredibly useful for homelabs, remote infrastructure troubleshooting, acting as a drop-in emergency dashboard over a tunnel when native SSH acts up, or just letting your senior dev securely jump in to fix your broken environment.
 
 ## Contributions & Issues
 
@@ -64,6 +64,6 @@ See the [LICENSE](/LICENSE) file for more information. (Provided "AS IS" without
 
 ## 🤍 Support the Project
 
-Lopala is MIT licensed, but if you use the code, concept, or design engineering tokens in your own project, a **Star on GitHub** is the best way to say thanks.
+Latch is MIT licensed, but if you use the code, concept, or design engineering tokens in your own project, a **Star on GitHub** is the best way to say thanks.
 
-[⭐ Star github.com/s4tyendra/lopala](https://github.com/s4tyendra/lopala)
+[⭐ Star github.com/s4tyendra/latch](https://github.com/s4tyendra/latch)

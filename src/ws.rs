@@ -313,7 +313,7 @@ async fn spawn_pty(window_id: String, state: GlobalState) {
     let title_state = state.clone();
     let title_id = window_id.clone();
     tokio::spawn(async move {
-        let host = std::env::var("HOSTNAME").unwrap_or_else(|_| "lopala".into());
+        let host = std::env::var("HOSTNAME").unwrap_or_else(|_| "latch".into());
         let user = std::env::var("USER").unwrap_or_else(|_| "user".into());
         loop {
             tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;

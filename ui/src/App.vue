@@ -137,6 +137,9 @@ const handleEvent = (msg: any) => {
     case 'ChannelCreated':
       if (!channels.value.find(c => c.id === msg.channel.id)) channels.value.push(msg.channel)
       break
+    case 'ChannelCreated':
+      if (!channels.value.find(c => c.id === msg.channel.id)) channels.value.push(msg.channel)
+      break
     case 'SetWorkspaceCount':
       workspaceCount.value = msg.count
       break
@@ -217,7 +220,7 @@ onMounted(() => {
   window.addEventListener('keydown', onKeyDown)
 
   window.addEventListener('app-login', () => {
-    myName.value = (window as any).lopalaName || `user_${myId.value.substring(0, 4)}`
+    myName.value = (window as any).latchName || `user_${myId.value.substring(0, 4)}`
     connectWs(handleEvent, {
       onOpen: () => {
         notif.wsConnected()

@@ -96,7 +96,7 @@ pub async fn take_screenshot(Json(req): Json<TakeScreenshotReq>) -> impl IntoRes
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_secs();
-    let dir = format!("/tmp/lopala/screenshots/{}", req.display);
+    let dir = format!("/tmp/latch/screenshots/{}", req.display);
     std::fs::create_dir_all(&dir).unwrap_or_default();
 
     let path = format!("{}/{}.png", dir, now);

@@ -1,21 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO="s4tyendra/lopala"
-BINARY_DEST="/usr/bin/lopala"
+REPO="s4tyendra/latch"
+BINARY_DEST="/usr/bin/latch"
 
 # ── 1. OS check ───────────────────────────────────────────────────────────────
 OS=$(uname -s)
 if [ "$OS" != "Linux" ]; then
-    echo "Error: Lopala only supports Linux (detected: $OS)."
+    echo "Error: Latch only supports Linux (detected: $OS)."
     exit 1
 fi
 
 # ── 2. Architecture detection ─────────────────────────────────────────────────
 ARCH=$(uname -m)
 case "$ARCH" in
-    x86_64)          BINARY_NAME="lopala-linux-x64" ;;
-    aarch64|arm64)   BINARY_NAME="lopala-linux-arm64" ;;
+    x86_64)          BINARY_NAME="latch-linux-x64" ;;
+    aarch64|arm64)   BINARY_NAME="latch-linux-arm64" ;;
     *)               echo "Error: Unsupported architecture: $ARCH"; exit 1 ;;
 esac
 
@@ -40,7 +40,7 @@ echo "→ Latest release: $LATEST_TAG"
 CURRENT_VER="none"
 if [ -x "$BINARY_DEST" ]; then
     RAW=$("$BINARY_DEST" --version 2>/dev/null || true)
-    # `lopala 0.0.1` → strip leading 'v' from LATEST_TAG to compare apples-to-apples
+    # `latch 0.0.1` → strip leading 'v' from LATEST_TAG to compare apples-to-apples
     CURRENT_VER="v$(echo "$RAW" | awk '{print $2}')"
 fi
 
@@ -53,7 +53,7 @@ else
     DOWNLOAD_URL="https://github.com/$REPO/releases/download/$LATEST_TAG/$BINARY_NAME"
     echo "→ Downloading $BINARY_NAME from $DOWNLOAD_URL ..."
 
-    TMP_FILE=$(mktemp /tmp/lopala.XXXXXX)
+    TMP_FILE=$(mktemp /tmp/latch.XXXXXX)
     # Clean up temp file on exit (success or failure)
     trap 'rm -f "$TMP_FILE"' EXIT
 
@@ -75,7 +75,7 @@ else
     echo "→ Installing to $BINARY_DEST (requires sudo)..."
     sudo mv "$TMP_FILE" "$BINARY_DEST"
     sudo chmod +x "$BINARY_DEST"
-    echo "✅ Lopala $LATEST_TAG installed successfully."
+    echo "✅ Latch $LATEST_TAG installed successfully."
 fi
 
 # ── 7. Dependency audit ───────────────────────────────────────────────────────
@@ -86,7 +86,7 @@ if command -v cloudflared &> /dev/null; then
     echo "✅ 'cloudflared' is installed."
 else
     echo "⚠️  'cloudflared' not found."
-    echo "   That's fine — Lopala will auto-download it when you run with --tunnel."
+    echo "   That's fine — Latch will auto-download it when you run with --tunnel."
 fi
 
 if command -v rg &> /dev/null; then
@@ -102,4 +102,4 @@ else
 fi
 
 echo ""
-echo "✨ Done. Run: lopala --port 8080"
+echo "✨ Done. Run: latch --port 8080"

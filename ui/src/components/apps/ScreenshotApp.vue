@@ -40,7 +40,7 @@ const fetchDisplays = async () => {
 const fetchFiles = async (display: string) => {
   loadingFiles.value = true
   try {
-    const res = await fetch(`/api/files?path=${encodeURIComponent('/tmp/lopala/screenshots/' + display)}&_=${Date.now()}`)
+    const res = await fetch(`/api/files?path=${encodeURIComponent('/tmp/latch/screenshots/' + display)}&_=${Date.now()}`)
     if (res.ok) {
       const entries: FileEntry[] = await res.json()
       // sort newest first
@@ -131,9 +131,9 @@ onMounted(() => {
 
 const openFileManager = () => {
   if (!s.value.display) return
-  const path = `/tmp/lopala/screenshots/${s.value.display}`
-  spawnWindow('files', { title: 'Finder' })
-  loadFiles(path)
+  const path = `/tmp/latch/screenshots/${s.value.display}`
+  const id = spawnWindow('files', { title: 'Finder' })
+  loadFiles(id, path)
 }
 
 const formatDateTime = (ts: number) => {

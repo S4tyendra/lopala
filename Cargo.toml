@@ -1,6 +1,6 @@
 [package]
-name = "lopala"
-version = "0.0.5"
+name = "latch"
+version = "0.0.6"
 edition = "2024"
 
 [dependencies]

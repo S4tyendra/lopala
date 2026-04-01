@@ -24,7 +24,7 @@ const toggleHideHelp = () => {
 <template>
   <div class="h-full overflow-y-auto px-6 py-8 select-none" style="background:rgba(10,10,12,0.95)">
     <div class="max-w-[700px] mx-auto font-sans">
-      <div class="text-3xl font-bold mb-2 text-white/95">Lopala OS</div>
+      <div class="text-3xl font-bold mb-2 text-white/95">Latch OS</div>
       <div class="text-[14px] text-white/60 mb-10 leading-relaxed font-medium">Welcome to your ultimate cloud-native
         workspace. Everything you see is synced across all clients in real-time.</div>
 
@@ -55,12 +55,12 @@ const toggleHideHelp = () => {
       <div class="section mb-8">
         <h3 class="text-[12px] font-bold uppercase tracking-wider text-white/40 mb-3">Development & Support</h3>
         <div class="flex gap-4">
-          <a href="https://github.com/s4tyendra/lopala" target="_blank" rel="noopener noreferrer"
+          <a href="https://github.com/s4tyendra/latch" target="_blank" rel="noopener noreferrer"
             class="flex-1 p-4 rounded-2xl bg-blue-500/15 border border-blue-400/20 text-center hover:bg-blue-500/25 transition-all active:scale-95 duration-200 group">
             <div class="text-[13px] font-bold text-blue-300">GitHub Repo</div>
             <div class="text-[11px] text-blue-300/70 mt-0.5">Star the project! ★</div>
           </a>
-          <a href="https://satyendra.in/blog/why-i-built-lopala" target="_blank" rel="noopener noreferrer"
+          <a href="https://satyendra.in/blog/why-i-built-latch" target="_blank" rel="noopener noreferrer"
             class="flex-1 p-4 rounded-2xl bg-purple-500/15 border border-purple-400/20 text-center hover:bg-purple-500/25 transition-all active:scale-95 duration-200 group">
             <div class="text-[13px] font-bold text-purple-300">Developer Blog</div>
             <div class="text-[11px] text-purple-300/70 mt-0.5">Read the deep dives</div>

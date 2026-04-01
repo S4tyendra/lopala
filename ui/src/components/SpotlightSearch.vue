@@ -124,7 +124,7 @@ const openFile = (path: string) => {
   const dir = path.replace(/\/[^/]+$/, '') || '/'
   const fileName = path.split('/').pop() ?? ''
   // Find an existing files window to reuse, or spawn a new one
-  const existingWin = Object.values((window as any).__lopala_windows?.value ?? {}).find((w: any) => w.app === 'files')
+  const existingWin = Object.values((window as any).__latch_windows?.value ?? {}).find((w: any) => w.app === 'files')
   wsSend({
     type: 'SpawnWindow',
     window: {
