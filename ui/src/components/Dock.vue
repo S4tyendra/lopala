@@ -10,6 +10,7 @@ const APPS = ref([
   { id: 'canvas',   label: 'Canvas',   bg: '#7c3aed', path: '<path d="M12 21a9 9 0 0 1-9-9c0-5 4-9 9-9 5 0 9 4 9 9 0 2-1 3-3 3h-1c-1 0-2 1-2 2v1c0 1-1 2-2 2zm-5-9A1.5 1.5 0 1 1 5.5 12 1.5 1.5 0 0 1 7 12zm9 0a1.5 1.5 0 1 1-1.5-1.5A1.5 1.5 0 0 1 16 12zm-4-4a1.5 1.5 0 1 1-1.5-1.5A1.5 1.5 0 0 1 12 8z"/>' },
   { id: 'screenshot', label: 'Screenshot', bg: '#eab308', path: '<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline>' },
   { id: 'screenview', label: 'Screen View', bg: '#0e7490', path: '<rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line><circle cx="12" cy="10" r="3"></circle>' },
+  // { id: 'calculator', label: 'Calculator', bg: '#ea580c', path: '<rect x="4" y="2" width="16" height="20" rx="2" ry="2" stroke="white" stroke-width="2" fill="none"/><line x1="8" y1="6" x2="16" y2="6" stroke="white" stroke-width="2"/><line x1="16" y1="14" x2="16" y2="18" stroke="white" stroke-width="2"/><path d="M8 10h.01M12 10h.01M8 14h.01M12 14h.01M8 18h.01M12 18h.01" stroke="white" stroke-width="2.5" stroke-linecap="round"/>' },
   { id: 'taskmanager', label: 'Task Manager', bg: '#dc2626', path: '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>' },
 ])
 

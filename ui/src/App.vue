@@ -5,6 +5,7 @@ import { ref, watch, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import MenuBar from './components/MenuBar.vue'
 import Dock from './components/Dock.vue'
 import RemoteCursors from './components/RemoteCursors.vue'
+import DesktopWidgets from './components/DesktopWidgets.vue'
 import WindowFrame from './components/WindowFrame.vue'
 import TerminalApp from './components/apps/TerminalApp.vue'
 import FilesApp from './components/apps/FilesApp.vue'
@@ -16,6 +17,7 @@ import TaskmanagerApp from './components/apps/TaskmanagerApp.vue'
 import CodeEditorApp from './components/apps/CodeEditorApp.vue'
 import MediaViewerApp from './components/apps/MediaViewerApp.vue'
 import HelpApp from './components/apps/HelpApp.vue'
+// import CalculatorApp from './components/apps/CalculatorApp.vue'
 import Notifications from './components/Notifications.vue'
 import SpotlightSearch from './components/SpotlightSearch.vue'
 
@@ -33,6 +35,10 @@ import { drawStroke, clearCanvas, disposeCanvas, drawRemoteLine } from './compos
 import { applyRemoteScreenshotState } from './composables/useScreenshot'
 import { notif } from './composables/useNotifications'
 
+// ─── Desktop Widgets ref ─────────────────────────────────────────────────────
+const widgetsRef = ref<InstanceType<typeof DesktopWidgets> | null>(null)
+const toggleWidgets = () => { if (widgetsRef.value) widgetsRef.value.visible = !widgetsRef.value.visible }
+
 // ─── Clock ────────────────────────────────────────────────────────────────────
 const clock = ref('')
 const updateClock = () => { clock.value = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
@@ -43,6 +49,7 @@ const APP_NAMES: Record<string, string> = {
   terminal: 'Terminal', files: 'Finder', messages: 'Messages',
   canvas: 'Canvas', screenshot: 'Screenshot', screenview: 'Screen View',
   taskmanager: 'Task Manager', editor: 'Code Editor', help: 'Help',
+  // calculator: 'Calculator',
 }
 
 // ─── WS Event Handler ─────────────────────────────────────────────────────────
@@ -235,8 +242,10 @@ onUnmounted(() => {
 <template>
   <!-- ── Desktop ─────────────────────────────────────────────────────────────── -->
   <div class="fixed inset-0 overflow-hidden select-none" style="background:url('/bg.svg') center/cover">
+    <!-- Desktop Widgets layer (above bg, below windows) -->
+    <DesktopWidgets ref="widgetsRef" />
     <!-- Menu Bar (z: 2147483640) -->
-    <MenuBar :clock="clock" :active-app="activeApp" />
+    <MenuBar :clock="clock" :active-app="activeApp" @toggle-widgets="toggleWidgets" />
 
     <!-- Remote Cursors (z: 2147483647 — topmost) -->
     <RemoteCursors />
@@ -257,6 +266,7 @@ onUnmounted(() => {
         <CodeEditorApp v-else-if="win.app === 'editor'" :win-id="win.id" />
         <HelpApp v-else-if="win.app === 'help'" :win-id="win.id" />
         <MediaViewerApp v-else-if="win.app === 'media'" :win-id="win.id" />
+        <!-- <CalculatorApp v-else-if="win.app === 'calculator'" :win-id="win.id" /> -->
         <div v-else class="p-8 text-center text-white/20">Unknown App: {{ win.app }}</div>
       </WindowFrame>
     </div>

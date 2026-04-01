@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { currentWorkspace, workspaceCount, myName, myId, myLatency, users, wsSend } from '../composables/useWs'
 
 const props = defineProps<{ clock: string; activeApp: string }>()
+const emit = defineEmits<{ (e: 'toggle-widgets'): void }>()
 
 const showUsers = ref(false)
 
@@ -82,6 +83,21 @@ const myLatencyColor = computed(() => {
         :style="`color:${myLatencyColor}; background:${myLatencyColor}18`">
         {{ myLatencyLabel }}
       </div>
+
+      <!-- Widget toggle button -->
+      <button
+        @click="emit('toggle-widgets')"
+        class="text-[10px] font-semibold tracking-tighter uppercase px-1.5 py-0.5 rounded transition-all duration-150 cursor-pointer"
+        style="background:rgba(255,255,255,0.05); color:rgba(255,255,255,0.35);"
+        title="Toggle system widgets"
+      >
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <rect x="2" y="3" width="9" height="9" rx="1.5"/>
+          <rect x="13" y="3" width="9" height="9" rx="1.5"/>
+          <rect x="2" y="13" width="9" height="9" rx="1.5"/>
+          <rect x="13" y="13" width="9" height="9" rx="1.5"/>
+        </svg>
+      </button>
 
       <!-- Username button — click to toggle users panel -->
       <button
