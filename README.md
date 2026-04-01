@@ -1,5 +1,8 @@
 # Latch
 
+> **IMPORTANT** - DO NOT SHARE TUNNEL LINK OR PIN WITH ANYONE. THEY CAN LITERALLY ACCESS YOUR COMPUTER. SHARE ONLY IF YOU KNOW WHAT YOU ARE DOING.
+
+
 A zero-config, real-time Web Operating System that drops onto your local machine and securely exposes a full desktop/terminal experience over the web.
 
 Technical details on why it exists: [satyendra.in/blog/why-i-built-latch](https://satyendra.in/blog/why-i-built-latch)
